@@ -44,11 +44,13 @@ macro_rules! __str_ext__cache_static_regex {
 macro_rules! __str_ext__init_capture_iter {
     (plain $re_ident:ident, $regex:ty, $selfty:ty, $iter:ident, $s:expr) => {
         #[cfg(feature = "optimize_for_memory")]
-        let $re_ident = <$regex>::new(match <$selfty>::compile_rules() {
-            CompiledRules::Regex(r) => &r.to_owned(),
+        let $re_ident = match <$selfty>::compile_rules() {
+            CompiledRules::Regex(r) => <$regex>::new(r.as_str()).expect(
+                "Expected valid \
+            regex pattern",
+            ),
             _ => panic!("Compiled rules were not a Regex"),
-        })
-        .expect("Expected valid fancy_regex pattern");
+        };
 
         #[cfg(not(feature = "optimize_for_memory"))]
         let $re_ident = unsafe {
@@ -64,11 +66,13 @@ macro_rules! __str_ext__init_capture_iter {
     };
     (fancy $re_ident:ident, $regex:ty, $selfty:ty, $iter:ident, $s:expr) => {
         #[cfg(feature = "optimize_for_memory")]
-        let $re_ident = <$regex>::new(match <$selfty>::compile_rules() {
-            CompiledRules::Regex(r) => &r,
+        let $re_ident = match <$selfty>::compile_rules() {
+            CompiledRules::Regex(r) => <$regex>::new(r.as_str()).expect(
+                "Expected valid \
+            fancy_regex pattern",
+            ),
             _ => panic!("Compiled rules were not a Regex"),
-        })
-        .expect("Expected valid fancy_regex pattern");
+        };
 
         // Since split function is not available in fancy_regex
         // we do it manually using find_iter

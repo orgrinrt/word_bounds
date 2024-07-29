@@ -67,7 +67,9 @@ the most accurate results.
 > larger project,
 > otherwise one should stick to the defaults. The
 > default configuration for optimizations bring the heaviest one, `fancy_regex` variant, down from around the 40 micro
-> second range to its current ~15 micro second range (with the same system as for the above benchmark results).
+> second range to its current ~15 micro second range (with the same system as for the above benchmark results). *Do
+> note, though, that in general, optimising for memory here is fairly extreme, and makes the execution times
+> exceedingly heavier by avoiding allocations outside of the stack.*
 
 The official suggestion is to use `WordBoundResolverCharwalk` (i.e neither `use_regex`
 nor `use_fancy_regex` features are enabled),
