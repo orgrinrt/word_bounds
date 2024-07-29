@@ -13,7 +13,7 @@ word_bounds
 
 ## Usage
 
-`word_bounds` crate is intended to help detect word bounds and splitting up longer strings into smaller segments
+`word_bounds` crate is intended to help detect word bounds and split up longer strings into smaller segments
 based on rules that can be customized to fit your needs.
 
 The rules allow flexible segmenting, for example, by either detecting chars as their own segments (words), bind them
@@ -28,7 +28,7 @@ crate,
 with `fancy_regex` crate, and a custom regexless char-walking version.
 
 The performance of these methods is evaluated using `criterion`
-benchmarking library. See [benches/bench_word_bounds.rs](benches/segmentation.rs) for the benchmarking code and
+benchmarking library. See [benches/segmentation.rs](benches/segmentation.rs) for the benchmarking code and
 try it yourself. Here are the latest results on a macbook air m1 (which shows the relational performance, while the
 exacts
 will of course vary by system etc.):
