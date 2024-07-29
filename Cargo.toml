@@ -1,0 +1,42 @@
+[package]
+name = "word_bounds"
+authors = ["orgrinrt", "Hiisi Digital"]
+version = "0.0.1"
+edition = "2021"
+description = """
+Word bound detection with flexible rule-based approach and varying implementations to choose from
+"""
+license = "MIT"
+license-file = "LICENSE"
+readme = "README.md"
+keywords = ["string", "word", "bounds", "segmentation", "tokenization"]
+categories = ["text-processing", "value-formatting", "development-tools"]
+documentation = "https://docs.rs/word_bounds"
+homepage = "https://github.com/orgrinrt/word_bounds"
+repository = "https://github.com/orgrinrt/word_bounds"
+
+[[bench]]
+name = "segmentation"
+harness = false
+
+[dev-dependencies]
+criterion = { version = "0.5.1" }
+
+[dependencies]
+regex = { version = "1.10.5", optional = true }
+fancy-regex = { version = "0.13.0", optional = true }
+unicode-segmentation = { version = "1.11.0", optional = true }
+once_cell = "1.8.0"
+
+[features]
+default = []
+# implementation options
+#---- defaults to charwalk if no `use` flags set
+use_fancy_regex = ["fancy-regex"]
+use_regex = ["regex"]
+use_unicode_segmentation = ["unicode-segmentation"]
+# performance flags
+optimize_for_memory = []
+optimize_for_cpu = []
+# misc
+benchmark = ["regex", "fancy-regex", "optimize_for_cpu"]
