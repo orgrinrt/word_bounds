@@ -7,7 +7,8 @@ word_bounds
 [![GitHub Issues](https://img.shields.io/github/issues/orgrinrt/word_bounds.svg)](https://github.com/orgrinrt/word_bounds/issues)
 [![Current Version](https://img.shields.io/badge/version-0.0.1-red.svg)](https://github.com/orgrinrt/word_bounds)
 
-> Word bound detection with flexible rule-based approach and varying implementations to choose from
+> Word bound detection and string segmentation with flexible rule-based approach and varying implementations to choose
+> from
 
 </div>
 
@@ -20,6 +21,8 @@ The rules allow flexible segmenting, for example, by either detecting chars as t
 together with the ongoing segment, or start the next segment with it. The rules also allow for removing or retaining
 any chars, and has a customizable "sense" of punctuation chars (i.e you can detect words by underscores, whitespace,
 etc.).
+
+> Note: Work in progress; see [known issues](#known-issues) before choosing to use this crate
 
 ## Implementations & Performance
 
@@ -36,10 +39,11 @@ will of course vary by system etc.):
 | Trait                         | Execution Time       | Description                                                                                                                                                                                                                                                 |
 |-------------------------------|----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | `WordBoundResolverRegex`      | 119.09  µs (average) | ⚠️ **Major WIP** </br>(More) Accurate, but currently ~50x slower than `WordBoundResolverCharwalk`. Based on prior proof-of-concepts, we should ultimately land at around ~3x slower than the charwalk variant. Suitable for non-critical performance paths. |
-| `WordBoundResolverFancyRegex` | 15.433  µs (average) | 🚧 **WIP, but almost there** </br>All-inclusive regex logic including lookahead/lookback, which should be even more accurate, but ~7x slower than `WordBoundResolverCharwalk`. Use only when other variants fail.                                           |
-| `WordBoundResolverCharwalk`   | 2.4 µs (average)     | ❎ **Just needs more optimization** </br>Fastest and simplest, but could fail on certain edge cases. Officially suggested method for common cases.                                                                                                           |
+| `WordBoundResolverFancyRegex` | 15.433  µs (average) | 🚧 **WIP, but taking shape** </br>All-inclusive regex logic including lookahead/lookback, which should be even more accurate, but ~7x slower than `WordBoundResolverCharwalk`. Use only when other variants fail.                                           |
+| `WordBoundResolverCharwalk`   | 2.4 µs (average)     | ❎ **Somewhat complete; see: [known issues](#known-issues)** </br>Fastest and simplest, but could fail on certain edge cases. Officially suggested method for common cases.                                                                                  |
 
-The `criterion` benchmark results show that `WordBoundResolverCharwalk` is the fastest yet simplest method, taking only
+The `criterion` benchmark results show that `WordBoundResolverCharwalk` is the fastest, yet simplest, method, taking
+only
 about
 2.4 µs on average per the benchmarking execution. The regex variants can be more accurate, and their logic is
 using a tried and
@@ -79,6 +83,115 @@ unless you face an edge case that isn't covered yet in the manual parsing logic.
 > Note: Ultimately the costs are not usually all that significant, since this
 > shouldn't be called in any hot loops, but your mileage may vary. Any and all issues and pull requests are welcome,
 > if you face an edge case that isn't covered on the `WordBoundResolverCharwalk` variant.
+>
+
+## Known issues
+
+### Maturity
+
+A lot of the code is rough and naively implemented right now, some outright hacky, in order to reach
+feature-completeness<span style="vertical-align: super; font-size: 0.5rem">1</span>. Things
+are and
+can be extremely messy, and it's probably not going to get better before the crate reaches the version 1.0 milestone
+(feature-completeness).
+
+Contributing, then, can be a headache. Sorry about that.
+
+### Performance
+
+It is clear that all of the implementations require further work in this regard. In prior proof-of-concepts, we were
+able to reach execution times, for the charwalk method specifically, measured in the nanoseconds rather than
+microseconds. The expansion and generalization of the rules made some of the decisions made back then infeasible,
+and optimizations would have to be rethought almost entirely. Right now the focus has been finishing
+the crate as a) feature-complete and b) well tested, and only afterwards find ways to decrease the running
+costs<span style="vertical-align: super; font-size: 0.5rem">1</span>.
+
+### Specification
+
+Specification is currently only declared within the code, mainly in the unit tests (as explicit requirements to pass).
+The rules themselves, that govern the behaviour of the segmentation, are not yet well-documented, and to make informed
+choices
+maintaining,
+extending and
+refactoring the project, a set collection of requirements will need to be documented within this repo. This is under
+construction, but until this is done, contributing can be extra headache-inducing. Discussions on specifications is
+more than welcome.
+
+This also includes the public api, which isn't stable as yet. In general, a lot of the specification and documentation
+side of this
+crate remain
+unfinished,
+incomplete,
+unfortunately.
+Again, contributions, especially as
+discussions, are more than welcome.
+
+As it stands, the expanded tests with more challenging segmentation requirements are not passing for all of the
+traits. Most of this is pretty straight-forward to implement (naively), but rules would have to be expanded to allow
+flexibly
+configuring this
+kind of thing, which would then require a rework pass on all of the different segmentation methods. As a design
+decision, it's not as straight-forward to choose how this would be designed to yield best
+DX, and as such,
+the
+following
+problems are  
+currently WIP. Committing too much effort here towards a potentially misguided design that we'd have to rework later on
+anyway, should be avoided. So, the specification needs to come first.
+
+The currently known pain points that require further work, and are frozen until the specification work is done:
+
+#### "Acronyms" of punctuation chars, such as ellipses as three periods
+
+```
+---- tests::test_word_bounds_charwalk stdout ----
+thread 'tests::test_word_bounds_charwalk' panicked at tests/segmentation_short_strings.rs:99:13:
+assertion `left == right` failed
+  left: [".", "ellipses", "could", "be", "hard", "."]
+ right: ["...", "ellipses", "...", "could", "...", "be", "hard", "..."]
+
+---- tests::test_word_bounds_regex stdout ----
+thread 'tests::test_word_bounds_regex' panicked at tests/segmentation_short_strings.rs:89:13:
+assertion `left == right` failed
+  left: [".", "ellipses", "could", "be", "hard", "."]
+ right: ["...", "ellipses", "...", "could", "...", "be", "hard", "..."]
+
+---- tests::test_word_bounds_fancy_regex stdout ----
+thread 'tests::test_word_bounds_fancy_regex' panicked at tests/segmentation_short_strings.rs:78:13:
+assertion `left == right` failed
+  left: ["...", "ellipses", "could", "...", "be", "hard", "..."]
+ right: ["...", "ellipses", "...", "could", "...", "be", "hard", "..."]
+
+```
+
+#### Modern unicode "chars", such as emojis
+
+Charwalk is the only one that passes this test, but that doesn't guarantee that emojis work correctly with it right
+now either. We need to expand the specifications (and as such, tests) to cover more extraordinary test scenarios.
+
+```
+
+---- tests::test_word_bounds_regex stdout ----
+thread 'tests::test_word_bounds_regex' panicked at tests/segmentation_short_strings.rs:89:13:
+assertion `left == right` failed
+  left: ["maybe", "unicode", "emojis", "⚠", "are", "also", "🚧", "to", "be", "considered", "😅"]
+ right: ["maybe", "unicode", "emojis", "⚠\u{fe0f}", "are", "also", "🚧", "to", "be", "considered", "😅"]
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- tests::test_word_bounds_fancy_regex stdout ----
+thread 'tests::test_word_bounds_fancy_regex' panicked at tests/segmentation_short_strings.rs:78:13:
+assertion `left == right` failed
+  left: ["maybe", "unicode", "emojis", "⚠", "\u{fe0f}", "are", "also", "🚧", "to", "be", "considered", "😅"]
+ right: ["maybe", "unicode", "emojis", "⚠\u{fe0f}", "are", "also", "🚧", "to", "be", "considered", "😅"]
+
+```
+
+### Notes
+
+<span style="vertical-align: super; font-size: 0.5rem">1</span><small> this crate's behaviour is required for a few of
+the maintainer's other projects, which forces
+this
+prioritization right now. Be the change you want to see in the world, if this doesn't suit you.</small>
 
 ## Support
 
