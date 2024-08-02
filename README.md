@@ -90,7 +90,7 @@ unless you face an edge case that isn't covered yet in the manual parsing logic.
 ### Maturity
 
 A lot of the code is rough and naively implemented right now, some outright hacky, in order to reach
-feature-completeness<span style="vertical-align: super; font-size: 0.5rem">1</span>. Things
+feature-completeness<sup>1</sup>. Things
 are and
 can be extremely messy, and it's probably not going to get better before the crate reaches the version 1.0 milestone
 (feature-completeness).
@@ -104,7 +104,7 @@ able to reach execution times, for the charwalk method specifically, measured in
 microseconds. The expansion and generalization of the rules made some of the decisions made back then infeasible,
 and optimizations would have to be rethought almost entirely. Right now the focus has been finishing
 the crate as a) feature-complete and b) well tested, and only afterwards find ways to decrease the running
-costs<span style="vertical-align: super; font-size: 0.5rem">1</span>.
+costs<sup>1</sup>
 
 ### Specification
 
@@ -188,7 +188,7 @@ assertion `left == right` failed
 
 ### Notes
 
-<span style="vertical-align: super; font-size: 0.5rem">1</span><small> this crate's behaviour is required for a few of
+<sup>1</sup><small> this crate's behaviour is required for a few of
 the maintainer's other projects, which forces
 this
 prioritization right now. Be the change you want to see in the world, if this doesn't suit you.</small>
