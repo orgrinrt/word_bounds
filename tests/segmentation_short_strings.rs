@@ -60,6 +60,26 @@ mod tests {
                 "spaces",
             ],
         ),
+        (
+            "...ellipses... could ... be hard...",
+            &["...", "ellipses", "...", "could", "...", "be", "hard", "..."],
+        ),
+        (
+            "maybe unicode emojis ⚠️ are also 🚧 to be considered 😅",
+            &[
+                "maybe",
+                "unicode",
+                "emojis",
+                "⚠️",
+                "are",
+                "also",
+                "🚧",
+                "to",
+                "be",
+                "considered",
+                "😅",
+            ],
+        ),
     ];
 
     #[test]
