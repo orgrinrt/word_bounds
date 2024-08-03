@@ -97,6 +97,9 @@ can be extremely messy, and it's probably not going to get better before the cra
 
 Contributing, then, can be a headache. Sorry about that.
 
+In addition, everything is currently tested against the default rules, which means that the rule system is not
+currently stable or even actively tested. This limits the usability quite a bit for now.
+
 ### Performance
 
 It is clear that all of the implementations require further work in this regard. In prior proof-of-concepts, we were
