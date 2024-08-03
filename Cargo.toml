@@ -27,17 +27,17 @@ criterion = { version = "0.5.1" }
 regex = { version = "1.10.5", optional = true }
 fancy-regex = { version = "0.13.0", optional = true }
 unicode-segmentation = { version = "1.11.0", optional = true }
-once_cell = "1.8.0"
+once_cell = { version = "1.8.0", optional = true }
 
 [features]
-default = ["optimize_for_cpu", "use_unicode_segmentation"]
+default = ["optimize_for_cpu"]
 # implementation options
 #---- defaults to charwalk if no `use` flags set
 use_fancy_regex = ["fancy-regex"]
 use_regex = ["regex"]
-use_unicode_segmentation = ["unicode-segmentation"]
 # performance flags
-optimize_for_memory = []
-optimize_for_cpu = []
+optimize_for_memory = ["once_cell"]
+optimize_for_cpu = ["once_cell"]
+enhanced_accuracy = ["unicode-segmentation"] # at cost of performance
 # misc
 benchmark = ["regex", "fancy-regex", "optimize_for_cpu"]
