@@ -3,7 +3,6 @@ word_bounds
 <div style="text-align: center;">
 
 [![GitHub Stars](https://img.shields.io/github/stars/orgrinrt/word_bounds.svg)](https://github.com/orgrinrt/word_bounds/stargazers)
-[![Crates.io Total Downloads](https://img.shields.io/crates/d/word_bounds)](https://crates.io/crates/word_bounds)
 [![GitHub Issues](https://img.shields.io/github/issues/orgrinrt/word_bounds.svg)](https://github.com/orgrinrt/word_bounds/issues)
 [![Current Version](https://img.shields.io/badge/version-0.0.1-red.svg)](https://github.com/orgrinrt/word_bounds)
 
@@ -36,26 +35,25 @@ try it yourself. Here are the latest results on a macbook air m1 (which shows th
 exacts
 will of course vary by system etc.):
 
-| Trait                         | Execution Time       | Description                                                                                                                                                                                                                                                 |
-|-------------------------------|----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `WordBoundResolverRegex`      | 119.09  µs (average) | ⚠️ **Major WIP** </br>(More) Accurate, but currently ~50x slower than `WordBoundResolverCharwalk`. Based on prior proof-of-concepts, we should ultimately land at around ~3x slower than the charwalk variant. Suitable for non-critical performance paths. |
-| `WordBoundResolverFancyRegex` | 15.433  µs (average) | 🚧 **WIP, but taking shape** </br>All-inclusive regex logic including lookahead/lookback, which should be even more accurate, but ~7x slower than `WordBoundResolverCharwalk`. Use only when other variants fail.                                           |
-| `WordBoundResolverCharwalk`   | 2.4 µs (average)     | ❎ **Somewhat complete; see: [known issues](#known-issues)** </br>Fastest and simplest, but could fail on certain edge cases. Officially suggested method for common cases.                                                                                  |
+| Implementation (`word_bounds::impls::*`) | Execution Time       | Description                                                                                                                                                                                                                                                 |
+|-------------------------------------------|----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| `regex::Regex`      | 119.09  µs (average) | ⚠️ **Major WIP** </br>(More) Accurate, but currently ~50x slower than `charwalk::Charwalk`. Based on prior proof-of-concepts, we should ultimately land at around ~3x slower than the charwalk variant. Suitable for non-critical performance paths. |
+| `fancy_regex::FancyRegex` | 15.433  µs (average) | 🚧 **WIP, but taking shape** </br>All-inclusive regex logic including lookahead/lookback, which should be even more accurate, but ~7x slower than `charwalk::Charwalk`. Use only when other variants fail.                                           |
+| `charwalk::Charwalk`   | 2.4 µs (average)     | ❎ **Somewhat complete; see: [known issues](#known-issues)** </br>Fastest and simplest, but could fail on certain edge cases. Officially suggested method for common cases.                                                                                  |
 
-The `criterion` benchmark results show that `WordBoundResolverCharwalk` is the fastest, yet simplest, method, taking
+The `criterion` benchmark results show that `charwalk::Charwalk` is the fastest, yet simplest, method, taking
 only
 about
 2.4 µs on average per the benchmarking execution. The regex variants can be more accurate, and their logic is
 using a tried and
-tested framework, but they are significantly more expensive to run; the `WordBoundResolverRegex` that has no integrated
+tested framework, but they are significantly more expensive to run; the `regex::Regex` implementation, which has no integrated
 lookahead/lookback features, replaces this absence with a custom post-process pass, and should be about 3 times slower
 than the
-`WordBoundResolverCharwalk` variant (⚠️ *but is under construction, and while it passes the tests, it's 50x slower at
-the moment* ⚠️). The
-`WordBoundResolverFancyRegex` which makes use of the regex
+`charwalk::Charwalk` variant (⚠️ *but is under construction, and some of its tests currently fail; see [known issues](#known-issues)* ⚠️). The
+`fancy_regex::FancyRegex` implementation, which makes use of the regex
 engine for all of
 its logic (including
-lookahead/lookback), is more than 7 times slower than the `WordBoundResolverCharwalk` variant, though should yield
+lookahead/lookback), is more than 7 times slower than the `charwalk::Charwalk` variant, though should yield
 the most accurate results.
 
 > Note: The regex variants are somewhat optimized, and in addition the crate has two different focuses for
@@ -75,14 +73,14 @@ the most accurate results.
 > note, though, that in general, optimising for memory here is fairly extreme, and makes the execution times
 > exceedingly heavier by avoiding allocations outside of the stack.*
 
-The official suggestion is to use `WordBoundResolverCharwalk` (i.e neither `use_regex`
+The official suggestion is to use `charwalk::Charwalk` (i.e neither `use_regex`
 nor `use_fancy_regex` features are enabled),
 unless you face an edge case that isn't covered yet in the manual parsing logic. After that, you should test whether
-`WordBoundResolverRegex` works, and if not, try `WordBoundResolverFancyRegex`.
+`regex::Regex` works, and if not, try `fancy_regex::FancyRegex`.
 
 > Note: Ultimately the costs are not usually all that significant, since this
 > shouldn't be called in any hot loops, but your mileage may vary. Any and all issues and pull requests are welcome,
-> if you face an edge case that isn't covered on the `WordBoundResolverCharwalk` variant.
+> if you face an edge case that isn't covered on the `charwalk::Charwalk` variant.
 >
 
 ## Known issues
@@ -130,7 +128,7 @@ Again, contributions, especially as
 discussions, are more than welcome.
 
 As it stands, the expanded tests with more challenging segmentation requirements are not passing for all of the
-traits. Most of this is pretty straight-forward to implement (naively), but rules would have to be expanded to allow
+implementations. Most of this is pretty straight-forward to implement (naively), but rules would have to be expanded to allow
 flexibly
 configuring this
 kind of thing, which would then require a rework pass on all of the different segmentation methods. As a design
@@ -205,6 +203,6 @@ me a coffee, so I can dedicate more time on open-source projects like this :)
 
 ## License
 
-> You can check out the full license [here](https://github.com/orgrinrt/word_bounds/blob/master/LICENSE)
+> You can check out the full license [here](https://github.com/orgrinrt/word_bounds/blob/main/LICENSE)
 
 This project is licensed under the terms of the **MIT** license.
