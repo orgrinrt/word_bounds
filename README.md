@@ -44,7 +44,12 @@ will of course vary by system etc.):
 The `criterion` benchmark results show that `charwalk::Charwalk` is the fastest, yet simplest, method, taking
 only
 about
-2.4 µs on average per the benchmarking execution. The regex variants can be more accurate, and their logic is
+2.4 µs on average per the benchmarking execution.
+
+> Note: the figures in the table were measured before the rules were compiled once per input
+> rather than searched per character. On the same input and machine that change and the ones with
+> it cut `charwalk::Charwalk` to about half of what it was, so its row reads high. The regex rows
+> are unaffected: they do not read the rules the same way. The regex variants can be more accurate, and their logic is
 using a tried and
 tested framework, but they are significantly more expensive to run; the `regex::Regex` implementation, which has no integrated
 lookahead/lookback features, replaces this absence with a custom post-process pass, and should be about 3 times slower
@@ -100,10 +105,24 @@ currently stable or even actively tested. This limits the usability quite a bit 
 
 ### Performance
 
-It is clear that all of the implementations require further work in this regard. In prior proof-of-concepts, we were
-able to reach execution times, for the charwalk method specifically, measured in the nanoseconds rather than
-microseconds. The expansion and generalization of the rules made some of the decisions made back then infeasible,
-and optimizations would have to be rethought almost entirely. Right now the focus has been finishing
+In prior proof-of-concepts the charwalk method reached execution times measured in nanoseconds rather
+than microseconds. Generalising the rules made the decisions behind those numbers infeasible, and
+getting back there means rethinking the arrangement rather than tightening the loop.
+
+Some of that is done. The rules are now reduced once per input to the flags the walk reads, rather
+than the walk searching the rule list for every character and every rule kind; character
+membership is a bit test rather than a scan of a string; the default set of special characters is
+built without a hash set; and the walk makes one pass, so neither the characters nor the runs of
+punctuation are collected up front. Together those roughly halved the time per call.
+
+What remains is mostly allocation, and it is measurable: about a sixth of a call goes on the three
+rule methods, which each allocate on every call because their signatures return owned values, and
+most of the rest is one `String` per word, which is what returning `Vec<String>` asks for. Getting
+to nanoseconds means the segmentation handing back slices of the input rather than owned strings,
+and the rules being compiled once per ruleset rather than once per input. Both change the public
+surface, so they are design decisions rather than optimisations.
+
+Right now the focus has been finishing
 the crate as a) feature-complete and b) well tested, and only afterwards find ways to decrease the running
 costs<sup>1</sup>
 

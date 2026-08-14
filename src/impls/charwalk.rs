@@ -1,12 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::rules::RemoveMode::{All, Ends, Middle};
-use crate::rules::ResolverProcessingRule::{BoundEnd, BoundStart, Remove};
-use crate::rules::RuleTarget::{
-    CaseChangeNonAcronym, Char, NonPunctSpecialChar, Numerics, PunctSpecialChar,
-    PunctSpecialCharRun,
-};
-use crate::rules::Scope::{FullInput, SingleWord};
+use crate::impls::compiled::Compiled;
 use crate::rules::{DefaultRules, ResolverRules};
 use crate::CompiledRules::NotApplicable;
 use crate::{CompiledRules, WordBoundResolverImpl, __str_ext__instance_words_vec};
@@ -14,40 +8,70 @@ use crate::{CompiledRules, WordBoundResolverImpl, __str_ext__instance_words_vec}
 macro_rules! __str_ext__impl_parsing_for_target {
     ($target:expr, $predicate:expr, $rules:ident, $del_flag:ident, $commit_flag:ident,
     $bstart:ident, $bend:ident,
-    $idx:ident, $last_idx:ident) => {
+    $is_first:expr, $is_last:expr) => {
         __str_ext__impl_parsing_for_target!($target, $predicate, $rules, $del_flag, $commit_flag,
-        $bstart, $bend, $idx, $last_idx, { {} });
+        $bstart, $bend, $is_first, $is_last, { {} });
     };
     ($target:expr, $predicate:expr, $rules:ident, $del_flag:ident, $commit_flag:ident,
     $bstart:ident, $bend:ident,
-    $idx:ident, $last_idx:ident, { $($extras:tt)* } ) => {
-        if $predicate && !$del_flag {
-            if $rules.contains(&Remove($target, All)) {
+    $is_first:expr, $is_last:expr, { $($extras:tt)* } ) => {
+        if !$target.is_inert() && $predicate && !$del_flag {
+            if $target.remove_all {
                 $del_flag = true;
-            } else if $rules.contains(&Remove($target, Middle(FullInput))) {
-                if $idx != 0 && $idx != $last_idx {
+            } else if $target.remove_middle_input {
+                if !$is_first && !$is_last {
                     $del_flag = true;
                 }
-            } else if $rules.contains(&Remove($target, Middle(SingleWord))) {
+            } else if $target.remove_middle_word {
                 unimplemented!();
-            } else if $rules.contains(&Remove($target, Ends(FullInput))) {
-                if $idx == 0 || $idx == $last_idx {
+            } else if $target.remove_ends_input {
+                if $is_first || $is_last {
                     $del_flag = true;
                 }
-            } else if $rules.contains(&Remove($target, Ends(SingleWord))) {
+            } else if $target.remove_ends_word {
                 unimplemented!();
             }
-            if $rules.contains(&BoundStart($target)) {
+            if $target.bound_start {
                 $bstart = true;
                 $commit_flag = true;
             }
-            if $rules.contains(&BoundEnd($target)) {
+            if $target.bound_end {
                 $bend = true;
                 $commit_flag = true;
             }
             $($extras)*
         }
     };
+}
+
+/// Whether `c` is a digit, without reaching for the Unicode tables when it is ASCII.
+#[inline]
+fn is_digit(c: char) -> bool {
+    if c.is_ascii() {
+        c.is_ascii_digit()
+    } else {
+        c.is_numeric()
+    }
+}
+
+/// Whether `c` is upper case, ASCII answered without the tables.
+#[inline]
+fn is_upper(c: char) -> bool {
+    if c.is_ascii() {
+        c.is_ascii_uppercase()
+    } else {
+        c.is_uppercase()
+    }
+}
+
+/// Whether `c` is lower case, ASCII answered without the tables.
+#[inline]
+fn is_lower(c: char) -> bool {
+    if c.is_ascii() {
+        c.is_ascii_lowercase()
+    } else {
+        c.is_lowercase()
+    }
 }
 
 pub struct Charwalk<R: ResolverRules = DefaultRules> {
@@ -60,37 +84,14 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
         // dbg!(s);
 
         let punct_chars = R::punct_chars_non_regex();
-        let non_punct_special_chars = /*dbg!(*/R::non_punct_special_chars_non_regex()/*)*/;
-        let rules = R::resolution_pass_rules();
+        let non_punct_special_chars = R::non_punct_special_chars_non_regex();
+        let rule_list = R::resolution_pass_rules();
+        let rules = Compiled::new(&rule_list, &punct_chars, &non_punct_special_chars);
 
         let mut prev_char: Option<char> = None;
         let mut prev_prev_char: Option<char> = None;
         let mut prev_committed_char: Option<char> = None;
         let mut next_char: Option<char> = None;
-        let chars: Vec<char> = s.chars().collect();
-        let chars_len = chars.len();
-        if chars_len == 0 {
-            return words;
-        }
-        let last_idx = chars_len - 1;
-        let run_flags: Vec<(bool, bool, bool)> = {
-            let mut flags = vec![(false, false, false); chars_len];
-            let mut start = 0usize;
-            while start < chars_len {
-                let c = chars[start];
-                let mut end = start;
-                while end + 1 < chars_len && chars[end + 1] == c {
-                    end += 1;
-                }
-                if end > start && punct_chars.contains(c) {
-                    for (i, flag) in flags.iter_mut().enumerate().take(end + 1).skip(start) {
-                        *flag = (true, i == start, i == end);
-                    }
-                }
-                start = end + 1;
-            }
-            flags
-        };
         let mut flag_to_commit = false;
         let mut curr_word = String::new();
         let mut _prev_was_split: i8 = 0;
@@ -99,12 +100,16 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
         let mut bound_start: bool = false;
         let mut bound_end: bool = false;
 
-        for (idx, c) in s.chars().enumerate() {
+        let mut walk = s.chars().peekable();
+        let mut idx = 0usize;
+        while let Some(c) = walk.next() {
             flag_to_commit = false;
             flag_to_delete = false;
             bound_start = false;
             bound_end = false;
-            next_char = if idx < last_idx { Some(chars[idx + 1]) } else { None };
+            next_char = walk.peek().copied();
+            let is_first = idx == 0;
+            let is_last = next_char.is_none();
 
             macro_rules! impl_parsing_for {
                 ($target:expr, $predicate:expr) => {
@@ -116,8 +121,8 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
                         flag_to_commit,
                         bound_start,
                         bound_end,
-                        idx,
-                        last_idx
+                        is_first,
+                        is_last
                     );
                 };
                 ($target:expr, $predicate:expr, { $extras:tt }) => {
@@ -129,15 +134,22 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
                         flag_to_commit,
                         bound_start,
                         bound_end,
-                        idx,
-                        last_idx,
+                        is_first,
+                        is_last,
                         $extras
                     );
                 };
             }
 
-            let (in_run, run_starts, run_ends) = run_flags[idx];
-            impl_parsing_for!(PunctSpecialCharRun, in_run, {
+            let same_before = prev_char == Some(c);
+            let same_after = next_char == Some(c);
+            let punct_run = rules.punct.contains(c) && (same_before || same_after);
+            let (in_run, run_starts, run_ends) = (
+                punct_run,
+                punct_run && !same_before,
+                punct_run && !same_after,
+            );
+            impl_parsing_for!(rules.punct_run, in_run, {
                 {
                     // the run bounds the token it forms, not each character inside it
                     if !run_starts {
@@ -151,48 +163,46 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
                     }
                 }
             });
-            impl_parsing_for!(PunctSpecialChar, !in_run && punct_chars.contains(c));
-            impl_parsing_for!(Numerics, c.is_numeric(), {
+            impl_parsing_for!(rules.punct_char, !in_run && rules.punct.contains(c));
+            impl_parsing_for!(rules.numerics, is_digit(c), {
                 {
-                    if (prev_char.is_some() && prev_char.unwrap().is_numeric())
-                        && (next_char.is_some() && next_char.unwrap().is_numeric())
+                    if (prev_char.is_some() && is_digit(prev_char.unwrap()))
+                        && (next_char.is_some() && is_digit(next_char.unwrap()))
                     {
                         flag_to_commit = false;
                         bound_start = false;
                         bound_end = false;
-                    } else if (prev_char.is_some() && !prev_char.unwrap().is_numeric())
-                        && ((next_char.is_some() && next_char.unwrap().is_numeric())
+                    } else if (prev_char.is_some() && !is_digit(prev_char.unwrap()))
+                        && ((next_char.is_some() && is_digit(next_char.unwrap()))
                             || next_char.is_none())
                     {
                         bound_end = false;
-                        if rules.contains(&BoundStart(Numerics)) {
+                        if rules.numerics.bound_start {
                             bound_start = true;
                         }
-                    } else if (prev_char.is_some() && prev_char.unwrap().is_numeric())
-                        && ((next_char.is_some() && !next_char.unwrap().is_numeric())
+                    } else if (prev_char.is_some() && is_digit(prev_char.unwrap()))
+                        && ((next_char.is_some() && !is_digit(next_char.unwrap()))
                             || next_char.is_none())
                     {
                         bound_start = false;
-                        if rules.contains(&BoundEnd(Numerics)) {
+                        if rules.numerics.bound_end {
                             bound_end = true;
                             flag_to_commit = false;
                         }
                     }
                 }
             });
-            for rule in &rules {
-                if let Char(inner_c) = rule.target().unwrap() {
-                    impl_parsing_for!(Char(*inner_c), c == *inner_c, { {} });
-                }
+            for (inner_c, char_rules) in &rules.chars {
+                impl_parsing_for!(*char_rules, c == *inner_c, { {} });
             }
-            impl_parsing_for!(NonPunctSpecialChar, non_punct_special_chars.contains(c));
+            impl_parsing_for!(rules.non_punct_special_rules, rules.non_punct_special.contains(c));
             impl_parsing_for!(
-                CaseChangeNonAcronym,
+                rules.case_change,
                 prev_char.is_some()
-                    && ((prev_char.unwrap().is_uppercase()
-                        && (next_char.is_some() && next_char.unwrap().is_lowercase())
-                        && c.is_uppercase())
-                        || (prev_char.unwrap().is_lowercase() && c.is_uppercase()))
+                    && ((is_upper(prev_char.unwrap())
+                        && (next_char.is_some() && is_lower(next_char.unwrap()))
+                        && is_upper(c))
+                        || (is_lower(prev_char.unwrap()) && is_upper(c)))
             );
 
             // process
@@ -214,7 +224,7 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
                 prev_committed_char = Some(c);
                 curr_word.push(c);
             }
-            if idx == last_idx || (!flag_to_delete && bound_start && bound_end) {
+            if is_last || (!flag_to_delete && bound_start && bound_end) {
                 // a character that ended a token without starting one has already been committed
                 // above, so there is nothing left pending: the end of a punctuation run is the
                 // case that reaches here with an empty word in hand.
@@ -232,6 +242,7 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
             }
             prev_prev_char = prev_char;
             prev_char = Some(c);
+            idx += 1;
             _prev_was_split = if _prev_was_split < 1 { 0 } else { _prev_was_split - 1 };
         }
 
