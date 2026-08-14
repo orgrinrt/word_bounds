@@ -69,6 +69,9 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
         let mut next_char: Option<char> = None;
         let chars: Vec<char> = s.chars().collect();
         let chars_len = chars.len();
+        if chars_len == 0 {
+            return words;
+        }
         let last_idx = chars_len - 1;
         let run_flags: Vec<(bool, bool, bool)> = {
             let mut flags = vec![(false, false, false); chars_len];
