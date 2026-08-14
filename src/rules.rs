@@ -2,6 +2,7 @@ use crate::rules::RemoveMode::{All, Middle};
 use crate::rules::ResolverProcessingRule::{BoundEnd, BoundStart, Remove};
 use crate::rules::RuleTarget::{
     Acronym, CaseChangeNonAcronym, Char, NonPunctSpecialChar, Numerics, PunctSpecialChar,
+    PunctSpecialCharRun,
 };
 use crate::rules::Scope::FullInput;
 
@@ -106,6 +107,8 @@ impl ResolverRules for DefaultRules {
             BoundEnd(Acronym),
             BoundStart(PunctSpecialChar),
             BoundEnd(PunctSpecialChar),
+            BoundStart(PunctSpecialCharRun),
+            BoundEnd(PunctSpecialCharRun),
             BoundStart(Numerics),
             BoundEnd(Numerics),
             // commonly prefixes special chars that are not puncts
@@ -151,6 +154,10 @@ pub enum RuleTarget {
     Numerics,
     Acronym,
     PunctSpecialChar,
+    /// A run of two or more of the same punctuation character, read as one token rather than as
+    /// separate punctuation. An ellipsis is the common case: `...` is a unit, while a lone `.`
+    /// between words is a separator.
+    PunctSpecialCharRun,
     NonPunctSpecialChar,
     CaseChangeNonAcronym,
 }
