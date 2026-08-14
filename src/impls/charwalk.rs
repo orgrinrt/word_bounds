@@ -4,6 +4,7 @@ use crate::rules::RemoveMode::{All, Ends, Middle};
 use crate::rules::ResolverProcessingRule::{BoundEnd, BoundStart, Remove};
 use crate::rules::RuleTarget::{
     CaseChangeNonAcronym, Char, NonPunctSpecialChar, Numerics, PunctSpecialChar,
+    PunctSpecialCharRun,
 };
 use crate::rules::Scope::{FullInput, SingleWord};
 use crate::rules::{DefaultRules, ResolverRules};
@@ -69,6 +70,24 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
         let chars: Vec<char> = s.chars().collect();
         let chars_len = chars.len();
         let last_idx = chars_len - 1;
+        let run_flags: Vec<(bool, bool, bool)> = {
+            let mut flags = vec![(false, false, false); chars_len];
+            let mut start = 0usize;
+            while start < chars_len {
+                let c = chars[start];
+                let mut end = start;
+                while end + 1 < chars_len && chars[end + 1] == c {
+                    end += 1;
+                }
+                if end > start && punct_chars.contains(c) {
+                    for (i, flag) in flags.iter_mut().enumerate().take(end + 1).skip(start) {
+                        *flag = (true, i == start, i == end);
+                    }
+                }
+                start = end + 1;
+            }
+            flags
+        };
         let mut flag_to_commit = false;
         let mut curr_word = String::new();
         let mut _prev_was_split: i8 = 0;
@@ -114,7 +133,22 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
                 };
             }
 
-            impl_parsing_for!(PunctSpecialChar, punct_chars.contains(c));
+            let (in_run, run_starts, run_ends) = run_flags[idx];
+            impl_parsing_for!(PunctSpecialCharRun, in_run, {
+                {
+                    // the run bounds the token it forms, not each character inside it
+                    if !run_starts {
+                        bound_start = false;
+                    }
+                    if !run_ends {
+                        bound_end = false;
+                    }
+                    if !run_starts && !run_ends {
+                        flag_to_commit = false;
+                    }
+                }
+            });
+            impl_parsing_for!(PunctSpecialChar, !in_run && punct_chars.contains(c));
             impl_parsing_for!(Numerics, c.is_numeric(), {
                 {
                     if (prev_char.is_some() && prev_char.unwrap().is_numeric())
@@ -178,11 +212,20 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
                 curr_word.push(c);
             }
             if idx == last_idx || (!flag_to_delete && bound_start && bound_end) {
-                if !curr_word.ends_with(c) {
-                    curr_word.push(c);
+                // a character that ended a token without starting one has already been committed
+                // above, so there is nothing left pending: the end of a punctuation run is the
+                // case that reaches here with an empty word in hand.
+                let already_committed =
+                    flag_to_commit && bound_end && !bound_start && !flag_to_delete;
+                if !already_committed {
+                    if !flag_to_delete && !curr_word.ends_with(c) {
+                        curr_word.push(c);
+                    }
+                    if !curr_word.is_empty() {
+                        words.push(curr_word.to_lowercase());
+                        curr_word.clear();
+                    }
                 }
-                words.push(curr_word.to_lowercase());
-                curr_word.clear();
             }
             prev_prev_char = prev_char;
             prev_char = Some(c);
