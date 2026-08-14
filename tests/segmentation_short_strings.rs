@@ -114,3 +114,23 @@ mod tests {
         }
     }
 }
+
+#[cfg(test)]
+mod edge_cases {
+    use word_bounds::impls::charwalk::Charwalk;
+    use word_bounds::resolver::WordBoundResolver;
+    use word_bounds::rules::DefaultRules;
+
+    /// Empty input used to panic: the walk took `len - 1` for the last index before checking
+    /// whether there was anything to walk.
+    #[test]
+    fn empty_input_yields_no_words() {
+        let words = WordBoundResolver::<Charwalk, DefaultRules>::resolve("");
+        assert!(words.is_empty(), "expected no words, got {words:?}");
+    }
+
+    #[test]
+    fn single_character_input_yields_one_word() {
+        assert_eq!(WordBoundResolver::<Charwalk, DefaultRules>::resolve("a"), ["a"]);
+    }
+}
