@@ -8,7 +8,6 @@ Word bound detection and string segmentation with flexible rule-based approach a
 from
 """
 license = "MIT"
-license-file = "LICENSE"
 readme = "README.md"
 keywords = ["string", "word", "bounds", "segmentation", "tokenization"]
 categories = ["text-processing", "value-formatting", "development-tools"]
