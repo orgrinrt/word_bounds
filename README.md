@@ -25,7 +25,7 @@ etc.).
 
 ## Implementations & Performance
 
-This repository currently contains three different methods to perform word bounds resolution - with standard `regex`
+This repository currently contains three different methods to perform word bounds resolution: with the standard `regex`
 crate,
 with `fancy_regex` crate, and a custom regexless char-walking version.
 
@@ -37,9 +37,9 @@ will of course vary by system etc.):
 
 | Implementation (`word_bounds::impls::*`) | Execution Time       | Description                                                                                                                                                                                                                                                 |
 |-------------------------------------------|----------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| `regex::Regex`      | 119.09  µs (average) | ⚠️ **Major WIP** </br>(More) Accurate, but currently ~50x slower than `charwalk::Charwalk`. Based on prior proof-of-concepts, we should ultimately land at around ~3x slower than the charwalk variant. Suitable for non-critical performance paths. |
-| `fancy_regex::FancyRegex` | 15.433  µs (average) | 🚧 **WIP, but taking shape** </br>All-inclusive regex logic including lookahead/lookback, which should be even more accurate, but ~7x slower than `charwalk::Charwalk`. Use only when other variants fail.                                           |
-| `charwalk::Charwalk`   | 2.4 µs (average)     | ❎ **Passes the current segmentation suite; see: [known issues](#known-issues)** </br>Fastest and simplest, and the only implementation that handles punctuation runs and variation-selector emoji. Officially suggested method.                                                                                  |
+| `regex::Regex`      | 119.09  µs (average) | **Major WIP** </br>(More) Accurate, but currently ~50x slower than `charwalk::Charwalk`. Based on prior proof-of-concepts, we should ultimately land at around ~3x slower than the charwalk variant. Suitable for non-critical performance paths. |
+| `fancy_regex::FancyRegex` | 15.433  µs (average) | **WIP, but taking shape** </br>All-inclusive regex logic including lookahead/lookback, which should be even more accurate, but ~7x slower than `charwalk::Charwalk`. Use only when other variants fail.                                           |
+| `charwalk::Charwalk`   | 2.4 µs (average)     | **Passes the current segmentation suite; see: [known issues](#known-issues)** </br>Fastest and simplest, and the only implementation that handles punctuation runs and variation-selector emoji. Officially suggested method.                                                                                  |
 
 The `criterion` benchmark results show that `charwalk::Charwalk` is the fastest, yet simplest, method, taking
 only
@@ -54,7 +54,7 @@ using a tried and
 tested framework, but they are significantly more expensive to run; the `regex::Regex` implementation, which has no integrated
 lookahead/lookback features, replaces this absence with a custom post-process pass, and should be about 3 times slower
 than the
-`charwalk::Charwalk` variant (⚠️ *but is under construction, and some of its tests currently fail; see [known issues](#known-issues)* ⚠️). The
+`charwalk::Charwalk` variant (*but is under construction, and some of its tests currently fail; see [known issues](#known-issues)*). The
 `fancy_regex::FancyRegex` implementation, which makes use of the regex
 engine for all of
 its logic (including
