@@ -31,7 +31,9 @@ with `fancy_regex` crate, and a custom regexless char-walking version.
 
 The performance of these methods is evaluated using `criterion`
 benchmarking library. See [benches/segmentation.rs](benches/segmentation.rs) for the benchmarking code and
-try it yourself. Here are the latest results on a macbook air m1 (which shows the relational performance, while the
+try it yourself with `cargo bench --features benchmark`. The bench measures all three implementations, so it
+needs that feature to compile: the two regex ones are behind feature gates and are absent from a default
+build. Here are the latest results on a macbook air m1 (which shows the relational performance, while the
 exacts
 will of course vary by system etc.):
 
