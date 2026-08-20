@@ -230,4 +230,4 @@ me a coffee, so I can dedicate more time on open-source projects like this :)
 
 > You can check out the full license [here](https://github.com/orgrinrt/word_bounds/blob/main/LICENSE)
 
-This project is licensed under the terms of the **MIT** license.
+This project is licensed under the terms of the **MPL-2.0** license.
