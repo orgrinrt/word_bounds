@@ -2,6 +2,7 @@ use crate::rules::RemoveMode::{All, Middle};
 use crate::rules::ResolverProcessingRule::{BoundEnd, BoundStart, Remove};
 use crate::rules::RuleTarget::{
     Acronym, CaseChangeNonAcronym, Char, NonPunctSpecialChar, Numerics, PunctSpecialChar,
+    PunctSpecialCharRun,
 };
 use crate::rules::Scope::FullInput;
 
@@ -35,21 +36,31 @@ pub trait ResolverRules {
     }
 
     fn non_punct_special_chars_non_regex() -> String {
-        let mut result: String = String::new();
-        let mut exclude_set = Self::punct_chars_non_regex()
-            .chars()
-            .collect::<std::collections::HashSet<_>>();
+        // Everything named here is ASCII, so the excluded set is two words of bits rather than a
+        // hash set: this is called once per input, and hashing three dozen characters to answer
+        // "is this one excluded" costs more than the walk that follows it.
+        let mut excluded: u128 = 0;
+        let mut exclude = |c: char| {
+            let value = c as u32;
+            if value < 128 {
+                excluded |= 1u128 << value;
+            }
+        };
+        for c in Self::punct_chars_non_regex().chars() {
+            exclude(c);
+        }
         for rule in &Self::resolution_pass_rules() {
             match rule {
-                Remove(Char(c), _) | BoundStart(Char(c)) | BoundEnd(Char(c)) => {
-                    exclude_set.insert(*c);
-                },
+                Remove(Char(c), _) | BoundStart(Char(c)) | BoundEnd(Char(c)) => exclude(*c),
                 _ => (),
             }
         }
-        for i in vec![33..47, 58..64, 91..96, 123..127].into_iter().flatten() {
-            if let Some(c) = std::char::from_u32(i as u32) {
-                if !exclude_set.contains(&c) {
+
+        // the ASCII punctuation blocks, between the ranges holding digits and letters
+        let mut result: String = String::with_capacity(32);
+        for i in (33..47).chain(58..64).chain(91..96).chain(123..127) {
+            if excluded & (1u128 << i) == 0 {
+                if let Some(c) = std::char::from_u32(i as u32) {
                     result.push(c);
                 }
             }
@@ -106,6 +117,8 @@ impl ResolverRules for DefaultRules {
             BoundEnd(Acronym),
             BoundStart(PunctSpecialChar),
             BoundEnd(PunctSpecialChar),
+            BoundStart(PunctSpecialCharRun),
+            BoundEnd(PunctSpecialCharRun),
             BoundStart(Numerics),
             BoundEnd(Numerics),
             // commonly prefixes special chars that are not puncts
@@ -151,6 +164,10 @@ pub enum RuleTarget {
     Numerics,
     Acronym,
     PunctSpecialChar,
+    /// A run of two or more of the same punctuation character, read as one token rather than as
+    /// separate punctuation. An ellipsis is the common case: `...` is a unit, while a lone `.`
+    /// between words is a separator.
+    PunctSpecialCharRun,
     NonPunctSpecialChar,
     CaseChangeNonAcronym,
 }

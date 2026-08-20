@@ -1,3 +1,4 @@
+pub(crate) mod compiled;
 pub mod charwalk;
 #[cfg(any(feature = "use_fancy_regex", feature = "benchmark"))]
 pub mod fancy_regex;

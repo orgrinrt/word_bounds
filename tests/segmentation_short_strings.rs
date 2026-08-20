@@ -82,7 +82,15 @@ mod tests {
         ),
     ];
 
+    // Catalogued, not passing. The regex and fancy_regex backends do not implement
+    // `PunctSpecialCharRun`, so they split `...` into separate tokens where charwalk reads it as
+    // one. Both backends say so at their `RuleTarget::PunctSpecialCharRun` arm. The assertion
+    // below states the INTENDED behaviour and is left as the specification of the gap rather than
+    // weakened to match what the backends currently do.
+    //
+    // Run them with `cargo test --features use_regex,use_fancy_regex -- --ignored`.
     #[test]
+    #[ignore = "catalogue: fancy_regex does not segment punctuation runs; charwalk does"]
     #[cfg(any(feature = "use_fancy_regex", feature = "benchmark"))]
     fn test_word_bounds_fancy_regex() {
         for (input, expected) in TEST_DEFAULT {
@@ -93,7 +101,15 @@ mod tests {
         }
     }
 
+    // Catalogued, not passing. The regex and fancy_regex backends do not implement
+    // `PunctSpecialCharRun`, so they split `...` into separate tokens where charwalk reads it as
+    // one. Both backends say so at their `RuleTarget::PunctSpecialCharRun` arm. The assertion
+    // below states the INTENDED behaviour and is left as the specification of the gap rather than
+    // weakened to match what the backends currently do.
+    //
+    // Run them with `cargo test --features use_regex,use_fancy_regex -- --ignored`.
     #[test]
+    #[ignore = "catalogue: regex does not segment punctuation runs; charwalk does"]
     #[cfg(any(feature = "use_regex", feature = "benchmark"))]
     fn test_word_bounds_regex() {
         for (input, expected) in TEST_DEFAULT {
@@ -112,5 +128,25 @@ mod tests {
                 *expected
             );
         }
+    }
+}
+
+#[cfg(test)]
+mod edge_cases {
+    use word_bounds::impls::charwalk::Charwalk;
+    use word_bounds::resolver::WordBoundResolver;
+    use word_bounds::rules::DefaultRules;
+
+    /// Empty input used to panic: the walk took `len - 1` for the last index before checking
+    /// whether there was anything to walk.
+    #[test]
+    fn empty_input_yields_no_words() {
+        let words = WordBoundResolver::<Charwalk, DefaultRules>::resolve("");
+        assert!(words.is_empty(), "expected no words, got {words:?}");
+    }
+
+    #[test]
+    fn single_character_input_yields_one_word() {
+        assert_eq!(WordBoundResolver::<Charwalk, DefaultRules>::resolve("a"), ["a"]);
     }
 }

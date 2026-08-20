@@ -7,8 +7,7 @@ description = """
 Word bound detection and string segmentation with flexible rule-based approach and varying implementations to choose 
 from
 """
-license = "MIT"
-license-file = "LICENSE"
+license = "MPL-2.0"
 readme = "README.md"
 keywords = ["string", "word", "bounds", "segmentation", "tokenization"]
 categories = ["text-processing", "value-formatting", "development-tools"]

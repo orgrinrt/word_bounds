@@ -179,6 +179,10 @@ where
                     RuleTarget::NonPunctSpecialChar => {
                         pattern.push(format!(r"(?={})", non_punct_special_chars).into());
                     }
+                    RuleTarget::PunctSpecialCharRun => {
+                        // not expressed in the pattern: this backend does not implement
+                        // punctuation runs, charwalk does. Named so rule compilation stays total.
+                    }
                     _ => { unimplemented!() }
                 },
                 ResolverProcessingRule::BoundEnd(target) => match target {

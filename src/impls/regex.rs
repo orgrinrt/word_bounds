@@ -205,6 +205,12 @@ where
                                 word.clone_into(&mut attach_to_next);
                             }
                         },
+                        RuleTarget::PunctSpecialCharRun => {
+                            // not expressed in the pattern: this backend does not implement
+                            // punctuation runs, charwalk does. Matching a run of the same
+                            // character needs a backreference, which the `regex` crate has none
+                            // of by design. Named so rule compilation stays total.
+                        },
                         _ => {
                             unimplemented!()
                         },
