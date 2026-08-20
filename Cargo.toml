@@ -1,8 +1,9 @@
 [package]
 name = "word_bounds"
 authors = ["orgrinrt", "Hiisi Digital"]
-version = "0.0.1"
+version = "0.0.2"
 edition = "2021"
+rust-version = "1.70"
 description = """
 Word bound detection and string segmentation with flexible rule-based approach and varying implementations to choose 
 from

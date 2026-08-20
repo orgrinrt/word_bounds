@@ -17,26 +17,42 @@ macro_rules! __str_ext__instance_words_vec {
     };
 }
 
+/// The compiled pattern, built once and shared.
+///
+/// A `OnceLock`, not a `static mut` behind an `is_none()` check.
+///
+/// The previous shape was a data race, and not a theoretical one: two threads calling
+/// `resolve` both saw `None`, both built a regex, and one wrote the static while the other
+/// was reading it. Rust's debug precondition checks caught the result inside
+/// `regex-automata`, as `slice::get_unchecked requires that the index is within the
+/// slice`, and aborted the process. It reproduced by running two of this crate's own tests
+/// at once, which is what `cargo test` does by default; running the same calls one after
+/// another never showed it.
+///
+/// `optimize_for_cpu` is on by default, so this was the default configuration.
+///
+/// `once_cell` was already a declared dependency of both performance features and was not
+/// being used for this.
 #[macro_export]
 macro_rules! __str_ext__cache_static_regex {
     ($regex:ty, $selfty:ty) => {
         #[cfg(not(feature = "optimize_for_memory"))]
-        static mut REGEX: Option<$regex> = None;
+        static REGEX: ::once_cell::sync::OnceCell<$regex> = ::once_cell::sync::OnceCell::new();
 
+        /// Returns the shared pattern, compiling it on the first call.
+        ///
+        /// Two threads arriving together agree on the answer: one wins the initialisation
+        /// and the other waits for it and sees the winner's value.
         #[cfg(not(feature = "optimize_for_memory"))]
-        unsafe fn set_regex<R>()
+        fn shared_regex<R>() -> &'static $regex
         where
             R: ResolverRules + 'static,
         {
-            let new_re = match <$selfty>::compile_rules() {
-                CompiledRules::Regex(r) => <$regex>::new(r.as_str()).expect(
-                    "Expected valid \
-                fancy_regex pattern",
-                ),
+            REGEX.get_or_init(|| match <$selfty>::compile_rules() {
+                CompiledRules::Regex(r) => <$regex>::new(r.as_str())
+                    .expect("Expected valid regex pattern"),
                 _ => panic!("Compiled rules were not a Regex"),
-            };
-
-            REGEX = Some(new_re);
+            })
         }
     };
 }
@@ -54,12 +70,7 @@ macro_rules! __str_ext__init_capture_iter {
         };
 
         #[cfg(not(feature = "optimize_for_memory"))]
-        let $re_ident = unsafe {
-            if REGEX.is_none() {
-                set_regex::<R>()
-            }
-            REGEX.as_ref().unwrap()
-        };
+        let $re_ident = shared_regex::<R>();
         #[cfg(not(feature = "optimize_for_memory"))]
         let $iter = $re_ident.captures_iter($s);
         #[cfg(feature = "optimize_for_memory")]
@@ -79,10 +90,7 @@ macro_rules! __str_ext__init_capture_iter {
         // we do it manually using find_iter
         #[cfg(not(feature = "optimize_for_memory"))]
         let $iter = unsafe {
-            if REGEX.is_none() {
-                set_regex::<R>()
-            }
-            REGEX.as_ref().unwrap().find_iter($s)
+            shared_regex::<R>().find_iter($s)
         };
         #[cfg(feature = "optimize_for_memory")]
         let $iter = $re_ident.find_iter($s);
