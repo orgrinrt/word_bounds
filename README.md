@@ -116,7 +116,7 @@ The segmentation tests for those two backends state the intended behaviour and a
 `#[ignore]` with a catalogue reason rather than weakened to match what the backends do, so a normal
 run stays green while the gap is visible:
 
-```
+```bash
 cargo test --features use_regex,use_fancy_regex -- --ignored
 ```
 
@@ -202,7 +202,7 @@ specification and the tests need to cover more of these before that can be claim
 The other two implementations fail here. `regex` drops the variation selector, and `fancy_regex`
 splits it into its own token:
 
-```
+```text
 ---- tests::test_word_bounds_regex stdout ----
   left: ["maybe", "unicode", "emojis", "⚠", "are", "also", "🚧", "to", "be", "considered", "😅"]
  right: ["maybe", "unicode", "emojis", "⚠\u{fe0f}", "are", "also", "🚧", "to", "be", "considered", "😅"]
