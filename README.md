@@ -105,6 +105,23 @@ Contributing, then, can be a headache. Sorry about that.
 In addition, everything is currently tested against the default rules, which means that the rule system is not
 currently stable or even actively tested. This limits the usability quite a bit for now.
 
+### The regex backends do not segment punctuation runs
+
+`charwalk::Charwalk` reads a run of the same punctuation character as one token, so `...` is a
+single token rather than three. Neither regex backend does. `regex` has no backreferences by
+design, and while `fancy_regex` has them, the rule is not expressed in its pattern either; both
+say so at their `RuleTarget::PunctSpecialCharRun` arm.
+
+The segmentation tests for those two backends state the intended behaviour and are marked
+`#[ignore]` with a catalogue reason rather than weakened to match what the backends do, so a normal
+run stays green while the gap is visible:
+
+```
+cargo test --features use_regex,use_fancy_regex -- --ignored
+```
+
+That command is expected to fail, and the failure is the specification of what is missing.
+
 ### Performance
 
 In prior proof-of-concepts the charwalk method reached execution times measured in nanoseconds rather
