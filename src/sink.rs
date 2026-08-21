@@ -4,6 +4,15 @@
 //! API and the lending one is only where a committed word goes, so that is what this
 //! separates out: the walker pushes characters and says when a word ended, and the sink
 //! decides whether that means a `String` in a `Vec` or bytes in storage somebody lent.
+//!
+//! It is the extension point as well. A consumer that wants neither shape writes its own
+//! [`WordSink`] and hands it to [`walk`](crate::impls::charwalk::walk), which is how a case
+//! converter emits its separators and capitals as the words arrive rather than segmenting
+//! first and rewriting afterwards.
+//!
+//! A sink that lowercases character by character, as one writing into fixed storage must,
+//! needs the final-sigma rule reproduced. [`FINAL_SIGMA`], [`NON_FINAL_SIGMA`] and
+//! [`is_cased`] are what that takes, and are public for exactly that reason.
 
 use core::fmt::Debug;
 
@@ -14,7 +23,7 @@ use core::fmt::Debug;
 /// crate promises about its output and belongs here rather than in the walker, since the
 /// lending sink cannot lowercase a whole word after the fact without somewhere to put the
 /// result.
-pub(crate) trait WordSink {
+pub trait WordSink {
     /// What this sink refuses with. `Infallible` for a sink that cannot fail.
     type Err: Debug;
 
@@ -42,21 +51,15 @@ pub(crate) trait WordSink {
 /// to `σ`. A sink that lowercases as it goes does not know a character is final at the
 /// moment it arrives, so it holds the most recent one back and writes it once the next one
 /// arrives or the word ends, at which point which form to use is settled.
-// Only the lending sink lowercases character by character, so only it needs the rule
-// spelled out. `test` as well, because the unit tests below pin what the rule assumes
-// and are worth running under every selection rather than only the one that uses them.
-#[cfg(any(feature = "no_alloc", test))]
-pub(crate) const NON_FINAL_SIGMA: char = 'σ';
+pub const NON_FINAL_SIGMA: char = 'σ';
 /// The form a capital sigma takes at the end of a word.
-#[cfg(any(feature = "no_alloc", test))]
-pub(crate) const FINAL_SIGMA: char = 'ς';
+pub const FINAL_SIGMA: char = 'ς';
 
 /// Whether a character participates in the final-sigma rule as a preceding letter.
 ///
 /// The rule asks for a cased letter before the sigma. Without one, a lone `Σ` is not final
 /// and stays `σ`, which is what `str::to_lowercase` does.
-#[cfg(any(feature = "no_alloc", test))]
-pub(crate) fn is_cased(c: char) -> bool {
+pub fn is_cased(c: char) -> bool {
     c.is_lowercase() || c.is_uppercase()
 }
 

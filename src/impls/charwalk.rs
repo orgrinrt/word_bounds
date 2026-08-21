@@ -102,7 +102,7 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
 /// collects into a `Vec<String>`; under `no_alloc` the lending API calls it with one that
 /// writes into storage the caller supplied. Stops at the first refusal from the sink, which
 /// is how a lend that ran out is reported rather than truncated over.
-pub(crate) fn walk<R: ResolverRules, S: WordSink>(s: &str, sink: &mut S) -> Result<(), S::Err> {
+pub fn walk<R: ResolverRules, S: WordSink>(s: &str, sink: &mut S) -> Result<(), S::Err> {
         let punct_chars = R::punct_chars_non_regex();
         let non_punct_special_chars = R::non_punct_special_chars_non_regex();
         let rule_list = R::resolution_pass_rules();

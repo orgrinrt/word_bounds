@@ -35,7 +35,7 @@ use crate::rules::{DefaultRules, ResolverRules};
 pub mod impls;
 pub mod resolver;
 pub mod rules;
-pub(crate) mod sink;
+pub mod sink;
 
 #[cfg(feature = "no_alloc")]
 mod lending;
