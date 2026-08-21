@@ -4,7 +4,7 @@ word_bounds
 
 [![GitHub Stars](https://img.shields.io/github/stars/orgrinrt/word_bounds.svg)](https://github.com/orgrinrt/word_bounds/stargazers)
 [![GitHub Issues](https://img.shields.io/github/issues/orgrinrt/word_bounds.svg)](https://github.com/orgrinrt/word_bounds/issues)
-[![Current Version](https://img.shields.io/badge/version-0.0.1-red.svg)](https://github.com/orgrinrt/word_bounds)
+[![Current Version](https://img.shields.io/badge/version-0.0.2-red.svg)](https://github.com/orgrinrt/word_bounds)
 
 > Word bound detection and string segmentation with flexible rule-based approach and varying implementations to choose
 > from

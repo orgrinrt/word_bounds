@@ -31,13 +31,15 @@ macro_rules! __str_ext__instance_words_vec {
 ///
 /// `optimize_for_cpu` is on by default, so this was the default configuration.
 ///
-/// `once_cell` was already a declared dependency of both performance features and was not
-/// being used for this.
+/// `std::sync::OnceLock` rather than `once_cell`, which an earlier version of this fix
+/// reached for. `once_cell` is optional here and gated on the two performance features, so
+/// naming it unconditionally broke every build with a regex backend and neither flag. The
+/// standard library's has been available since 1.70, which is what `rust-version` says.
 #[macro_export]
 macro_rules! __str_ext__cache_static_regex {
     ($regex:ty, $selfty:ty) => {
         #[cfg(not(feature = "optimize_for_memory"))]
-        static REGEX: ::once_cell::sync::OnceCell<$regex> = ::once_cell::sync::OnceCell::new();
+        static REGEX: ::std::sync::OnceLock<$regex> = ::std::sync::OnceLock::new();
 
         /// Returns the shared pattern, compiling it on the first call.
         ///
@@ -89,9 +91,7 @@ macro_rules! __str_ext__init_capture_iter {
         // Since split function is not available in fancy_regex
         // we do it manually using find_iter
         #[cfg(not(feature = "optimize_for_memory"))]
-        let $iter = unsafe {
-            shared_regex::<R>().find_iter($s)
-        };
+        let $iter = shared_regex::<R>().find_iter($s);
         #[cfg(feature = "optimize_for_memory")]
         let $iter = $re_ident.find_iter($s);
     };
