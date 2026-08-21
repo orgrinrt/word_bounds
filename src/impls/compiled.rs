@@ -5,6 +5,8 @@
 //! every character. The list does not change while a string is being walked, so the answers are
 //! worked out once here and the walk reads flags instead.
 
+use alloc::vec::Vec;
+
 use crate::rules::RemoveMode::{All, Ends, Middle};
 use crate::rules::ResolverProcessingRule::{BoundEnd, BoundStart, Remove};
 use crate::rules::Scope::{FullInput, SingleWord};

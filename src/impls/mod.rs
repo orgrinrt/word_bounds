@@ -1,19 +1,27 @@
 pub(crate) mod compiled;
 pub mod charwalk;
-#[cfg(any(feature = "use_fancy_regex", feature = "benchmark"))]
+// Both regex backends need `std`, and so does the `OnceLock` that caches the compiled
+// pattern, so `no_std` leaves only the character walker.
+#[cfg(all(not(feature = "no_std"), any(feature = "use_fancy_regex", feature = "benchmark")))]
 pub mod fancy_regex;
-#[cfg(any(feature = "use_regex", feature = "benchmark"))]
+#[cfg(all(not(feature = "no_std"), any(feature = "use_regex", feature = "benchmark")))]
 pub mod regex;
 
 #[macro_export]
+// `unused_mut` is allowed inside, because whether the caller mutates the vector in place
+// or hands it to something that does is the caller's business, and this macro cannot see
+// which. The character walker moves it into a sink; a consumer might push into it.
 macro_rules! __str_ext__instance_words_vec {
     ($s:expr, $vec:ident) => {
         #[cfg(feature = "optimize_for_cpu")]
-        let mut $vec = Vec::with_capacity($s.len() / $crate::CHARS_PER_WORD_AVG);
+        #[allow(unused_mut)]
+        let mut $vec = ::alloc::vec::Vec::with_capacity($s.len() / $crate::CHARS_PER_WORD_AVG);
         #[cfg(all(not(feature = "optimize_for_cpu"), feature = "optimize_for_memory"))]
-        let mut $vec = Vec::with_capacity($s.len() / $crate::CHARS_PER_WORD_AVG as usize);
+        #[allow(unused_mut)]
+        let mut $vec = ::alloc::vec::Vec::with_capacity($s.len() / $crate::CHARS_PER_WORD_AVG as usize);
         #[cfg(all(not(feature = "optimize_for_cpu"), not(feature = "optimize_for_memory")))]
-        let mut $vec = Vec::new();
+        #[allow(unused_mut)]
+        let mut $vec = ::alloc::vec::Vec::new();
     };
 }
 

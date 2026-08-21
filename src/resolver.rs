@@ -1,4 +1,7 @@
-use std::marker::PhantomData;
+use alloc::string::String;
+use alloc::vec::Vec;
+
+use core::marker::PhantomData;
 
 use crate::impls::charwalk::Charwalk;
 use crate::rules::{DefaultRules, ResolverRules};
