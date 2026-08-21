@@ -8,6 +8,8 @@
 //! These cases are the difference, written down. Every one was produced by running the
 //! three against the same input, not from reading the code.
 
+// The comparison needs something to compare against, and the default selection compiles
+// only charwalk, so the cases below are gated on a regex backend being present.
 #![cfg(any(feature = "use_regex", feature = "use_fancy_regex"))]
 
 use word_bounds::impls::charwalk::Charwalk;
