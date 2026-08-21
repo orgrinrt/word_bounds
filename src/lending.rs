@@ -117,6 +117,13 @@ where
 ///
 /// The rules say what a bound is. [`DefaultRules`] is what `fill_words` uses and what the
 /// allocating API uses, so the two agree; another rule set changes both together.
+///
+/// # Panics
+///
+/// On two rule targets the walker does not implement,
+/// `RemoveMode::Middle(Scope::SingleWord)` and `RemoveMode::Ends(Scope::SingleWord)`.
+/// Neither is reachable from [`DefaultRules`], so this is a hazard only for a rule set that
+/// names them. See [`walk`](crate::impls::charwalk::walk).
 pub fn fill_words_with<'a, R, T, B>(
     s: &str,
     text: &'a mut T,
@@ -132,7 +139,7 @@ where
         bounds:        Fill::new(bounds),
         pending_start: 0,
         held:          None,
-        before_held:   None,
+        last_cased:    None,
     };
 
     if let Err(exhausted) = crate::impls::charwalk::walk::<R, _>(s, &mut sink) {
@@ -155,8 +162,18 @@ struct LendingSink<'a> {
     pending_start: usize,
     /// The character pushed most recently, not yet written.
     held:          Option<char>,
-    /// The one before it, which the final-sigma rule needs.
-    before_held:   Option<char>,
+    /// The most recent cased character in the word being built, held or written.
+    ///
+    /// The rule asks for a cased character before the sigma, and `str::to_lowercase` walks
+    /// backwards past `Case_Ignorable` characters looking for one. Tracking the last cased
+    /// character rather than the immediately preceding one performs that skip exactly, and
+    /// costs nothing: an ignorable character simply never updates this.
+    ///
+    /// Looking only at the character immediately before is what this used to do, and
+    /// `"Α\u{301}Σ"` came out with the ordinary sigma where the allocating path gives the
+    /// final one, because the combining accent between them is ignorable and was not being
+    /// skipped.
+    last_cased:    Option<char>,
 }
 
 impl LendingSink<'_> {
@@ -181,7 +198,7 @@ impl LendingSink<'_> {
         // Both forms are named here rather than one being left to `to_lowercase`, so the
         // pair is visible in one place; `sink::tests` pins that they are what this assumes.
         if c == 'Σ' {
-            let final_position = is_final && self.before_held.is_some_and(is_cased);
+            let final_position = is_final && self.last_cased.is_some();
             return self.write(if final_position { FINAL_SIGMA } else { NON_FINAL_SIGMA });
         }
 
@@ -202,7 +219,11 @@ impl WordSink for LendingSink<'_> {
         let was_held = self.held;
         // Whatever was held is no longer last, so it is written in its non-final form.
         self.flush_held(false)?;
-        self.before_held = was_held;
+        // Only a cased character updates this, which is what performs the skip past
+        // `Case_Ignorable` characters that `str::to_lowercase` does.
+        if was_held.is_some_and(is_cased) {
+            self.last_cased = was_held;
+        }
         self.held = Some(c);
         Ok(())
     }
@@ -224,7 +245,7 @@ impl WordSink for LendingSink<'_> {
             Outcome::Err(e) => return Err(e),
         }
         self.pending_start = end;
-        self.before_held = None;
+        self.last_cased = None;
         Ok(())
     }
 }

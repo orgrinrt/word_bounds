@@ -34,7 +34,6 @@ criterion = { version = "0.5.1" }
 regex = { version = "1.10.5", optional = true }
 fancy-regex = { version = "0.13.0", optional = true }
 unicode-segmentation = { version = "1.11.0", optional = true }
-once_cell = { version = "1.8.0", optional = true }
 # Only under `no_alloc`, where it supplies the lending contract `fill_words` is written
 # against. notko is not on crates.io yet, so this is a git dependency, and a crate
 # carrying `no_alloc` cannot be published until it is.
@@ -47,8 +46,11 @@ default = ["optimize_for_cpu"]
 use_fancy_regex = ["fancy-regex"]
 use_regex = ["regex"]
 # performance flags
-optimize_for_memory = ["once_cell"]
-optimize_for_cpu = ["once_cell"]
+# Neither pulls a dependency any more. Both used to name `once_cell`, which the shared
+# compiled pattern reached for until `std::sync::OnceLock` replaced it; the dependency
+# outlived its only use and was still being compiled by every default build.
+optimize_for_memory = []
+optimize_for_cpu = []
 enhanced_accuracy = ["unicode-segmentation"] # at cost of performance
 # allocation
 # `no_std` compiles the regex backends out, because both regex crates need std. What

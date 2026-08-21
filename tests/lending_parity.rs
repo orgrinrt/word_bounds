@@ -14,6 +14,7 @@
 
 use word_bounds::fill_words;
 use word_bounds::impls::charwalk::Charwalk;
+use word_bounds::sink::is_cased;
 use word_bounds::resolver::WordBoundResolver;
 
 /// The allocating API's answer, through the backend `fill_words` also uses.
@@ -59,6 +60,24 @@ const CASES: &[&str] = &[
     "ΟΔΟΣ_ΣΤΟ",
     "camelΣCase",
     "ΤΕΛΟΣ ΑΡΧΗ",
+    // The three shapes a reviewer found the reproduction was missing. Each is a way the
+    // real rule differs from "look at the character immediately before the sigma".
+    //
+    // A combining accent between the letter and the sigma. It is `Case_Ignorable`, so
+    // `str::to_lowercase` skips it walking backwards and still finds the alpha.
+    "Α\u{301}Σ",
+    "ΑΒ\u{301}\u{308}Σ",
+    // A soft hyphen, which is `Cf` and also `Case_Ignorable`.
+    "Α\u{ad}Σ",
+    // A titlecase letter, which is `Cased` and answers false to both `is_lowercase` and
+    // `is_uppercase`.
+    "ǅΣ",
+    "ǄΣ",
+    "ǈΣ",
+    // Something genuinely not cased before the sigma, which is the case that must still
+    // come out as the ordinary form.
+    "1Σ",
+    "\u{301}Σ",
     // Non-ASCII that is not Greek, since the ASCII fast paths in the walker must not
     // change the answer for anything else.
     "ÄÖÜ_äöü",
@@ -113,6 +132,47 @@ fn the_final_sigma_rule_is_reproduced_rather_than_approximated() {
 
     // And the lending API takes the first answer rather than the second.
     assert_eq!(via_lending("ΟΔΟΣ"), vec!["οδος".to_string()]);
+}
+
+#[test]
+fn the_rule_looks_past_an_ignorable_character_for_a_cased_one() {
+    // `str::to_lowercase` walks backwards past `Case_Ignorable` characters looking for a
+    // cased one. Looking only at the character immediately before the sigma is what the
+    // sink used to do, and it gave the ordinary form here where the allocating path gives
+    // the final one.
+    //
+    // Tracking the most recent cased character rather than the immediately preceding one
+    // performs the skip exactly, because an ignorable character never updates it.
+    assert_eq!("Α\u{301}Σ".to_lowercase(), "α\u{301}ς");
+    assert_eq!(via_lending("Α\u{301}Σ"), vec!["α\u{301}ς".to_string()]);
+
+    assert_eq!("Α\u{ad}Σ".to_lowercase(), "α\u{ad}ς");
+    assert_eq!(via_lending("Α\u{ad}Σ"), vec!["α\u{ad}ς".to_string()]);
+}
+
+#[test]
+fn a_titlecase_letter_counts_as_cased() {
+    // Unicode `Cased` is `Lowercase` or `Uppercase` or general category `Lt`. `ǅ` is `Lt`
+    // and answers false to `char::is_lowercase` and `char::is_uppercase` alike, so a sigma
+    // after it was treated as though nothing cased preceded it.
+    assert!(!'ǅ'.is_lowercase());
+    assert!(!'ǅ'.is_uppercase());
+    assert!(is_cased('ǅ'), "titlecase is cased");
+
+    assert_eq!("ǅΣ".to_lowercase(), "ǆς");
+    assert_eq!(via_lending("ǅΣ"), vec!["ǆς".to_string()]);
+}
+
+#[test]
+fn something_uncased_before_the_sigma_leaves_the_ordinary_form() {
+    // The control for the two above. Without it they would pass just as well against an
+    // `is_cased` that answered true for everything, which would make every trailing sigma
+    // final.
+    assert!(!is_cased('1'));
+    assert!(!is_cased('\u{301}'));
+
+    assert_eq!(via_lending("1Σ"), via_alloc("1Σ"));
+    assert_eq!(via_lending("\u{301}Σ"), via_alloc("\u{301}Σ"));
 }
 
 #[test]

@@ -27,13 +27,20 @@ macro_rules! __str_ext__impl_parsing_for_target {
                     $del_flag = true;
                 }
             } else if $target.remove_middle_word {
-                unimplemented!();
+                // FIXME: `RemoveMode::Middle(Scope::SingleWord)` is unimplemented. It needs
+                // to know where a character sits inside the word being built rather than
+                // inside the input, which is what `_prev_prev_char` and
+                // `_prev_committed_char` are tracked for. Reachable from a caller's own
+                // `ResolverRules`, so `walk` documents it as a panic.
+                unimplemented!("RemoveMode::Middle(Scope::SingleWord)");
             } else if $target.remove_ends_input {
                 if $is_first || $is_last {
                     $del_flag = true;
                 }
             } else if $target.remove_ends_word {
-                unimplemented!();
+                // FIXME: `RemoveMode::Ends(Scope::SingleWord)` is unimplemented, for the
+                // same reason and needing the same state as the one above.
+                unimplemented!("RemoveMode::Ends(Scope::SingleWord)");
             }
             if $target.bound_start {
                 $bstart = true;
@@ -102,6 +109,14 @@ impl<R: ResolverRules> WordBoundResolverImpl<R> for Charwalk<R> {
 /// collects into a `Vec<String>`; under `no_alloc` the lending API calls it with one that
 /// writes into storage the caller supplied. Stops at the first refusal from the sink, which
 /// is how a lend that ran out is reported rather than truncated over.
+///
+/// # Panics
+///
+/// On two rule targets that `ResolverRules` can name and this walker does not implement:
+/// `RemoveMode::Middle(Scope::SingleWord)` and `RemoveMode::Ends(Scope::SingleWord)`. Both
+/// are about where a character sits inside the word being built rather than inside the
+/// input, and neither is reachable from [`DefaultRules`], so a caller reaches them only by
+/// writing its own rules. Grep for `FIXME` in this file for where they sit.
 pub fn walk<R: ResolverRules, S: WordSink>(s: &str, sink: &mut S) -> Result<(), S::Err> {
         let punct_chars = R::punct_chars_non_regex();
         let non_punct_special_chars = R::non_punct_special_chars_non_regex();

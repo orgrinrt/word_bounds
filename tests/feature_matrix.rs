@@ -106,10 +106,37 @@ fn the_parity_cases_actually_run_when_both_backends_are_present() {
 
 #[test]
 fn nothing_at_all_builds() {
-    // No backend flag and no performance flag. What is left is the character walker, which
-    // has to stand alone, because it is the only backend `no_std` keeps.
-    let (ok, err) = check("");
-    assert!(ok, "an empty selection builds:\n{err}");
+    // `--no-default-features` with nothing added, which `check("")` does not do: that
+    // branch adds no flags and so builds the defaults, making this a second copy of
+    // `the_default_selection_builds` under a name claiming otherwise.
+    //
+    // What this selection leaves is the character walker with no performance flag, which is
+    // the shape a `no_std` consumer gets and has to stand on its own.
+    let output = Command::new(env!("CARGO"))
+        .args(["check", "--quiet", "--no-default-features"])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .env(
+            "CARGO_TARGET_DIR",
+            concat!(env!("CARGO_MANIFEST_DIR"), "/target/feature-matrix"),
+        )
+        .output()
+        .expect("cargo runs");
+
+    assert!(
+        output.status.success(),
+        "an empty selection builds:\n{}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+}
+
+#[test]
+fn the_selections_the_manifest_offers_and_nothing_had_built() {
+    // `benchmark` and `enhanced_accuracy` are in the manifest and were in no case here, so
+    // the matrix's claim to cover every selection was short by three.
+    for selection in ["enhanced_accuracy", "no_alloc,enhanced_accuracy", "benchmark"] {
+        let (ok, err) = check(selection);
+        assert!(ok, "{selection} builds:\n{err}");
+    }
 }
 
 #[test]

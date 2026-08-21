@@ -19,10 +19,28 @@ use core::fmt::Debug;
 /// Somewhere a walk can put the words it finds.
 ///
 /// A word is built up by [`push_char`](WordSink::push_char) and ended by
-/// [`commit`](WordSink::commit). Committing lowercases what was pushed, which is what the
-/// crate promises about its output and belongs here rather than in the walker, since the
-/// lending sink cannot lowercase a whole word after the fact without somewhere to put the
-/// result.
+/// [`commit`](WordSink::commit).
+///
+/// # What an implementor owes
+///
+/// The two predicates are answers the walk acts on rather than conveniences, so an
+/// implementor that answers them wrongly changes the output. `pending_is_empty` is what the
+/// walk asks before committing, because two of its paths reach a commit with nothing in
+/// hand, and an empty word is not a word: a sink whose answer is always `false` yields an
+/// empty leading word on any input that starts with a delimiter, where the crate's own
+/// sinks yield none.
+///
+/// `pending_ends_with` guards one push at the end of the input, so that a character which
+/// both ends a token and starts one is not written twice.
+///
+/// # What this crate's sinks do, and what a different one may
+///
+/// Both sinks here lowercase on commit, which is what the crate promises about its output.
+/// That is a property of those sinks rather than of this trait: a sink written for a case
+/// conversion capitalises instead, which is exactly what
+/// [`str_extensions`](https://github.com/orgrinrt/str_extensions)' does, and it is a
+/// legitimate implementation. The trait says when a word starts and ends; what goes into
+/// the output is the sink's business.
 pub trait WordSink {
     /// What this sink refuses with. `Infallible` for a sink that cannot fail.
     type Err: Debug;
@@ -31,16 +49,18 @@ pub trait WordSink {
     fn push_char(&mut self, c: char) -> Result<(), Self::Err>;
 
     /// Whether nothing has been pushed since the last commit.
+    ///
+    /// The walk asks before committing, so answering wrongly produces or swallows words.
     fn pending_is_empty(&self) -> bool;
 
     /// Whether the word being built ends with `c`.
     fn pending_ends_with(&self, c: char) -> bool;
 
-    /// Ends the current word, lowercased, and starts an empty one.
+    /// Ends the current word and starts an empty one.
     ///
-    /// Called only when there is something pending: the walker checks first, because two
-    /// of its paths can reach a commit with an empty word in hand and an empty word is not
-    /// a word.
+    /// The walk calls this only when [`pending_is_empty`](WordSink::pending_is_empty)
+    /// answered `false`, which makes that answer part of the contract rather than a
+    /// courtesy.
     fn commit(&mut self) -> Result<(), Self::Err>;
 }
 
@@ -55,12 +75,25 @@ pub const NON_FINAL_SIGMA: char = 'σ';
 /// The form a capital sigma takes at the end of a word.
 pub const FINAL_SIGMA: char = 'ς';
 
-/// Whether a character participates in the final-sigma rule as a preceding letter.
+/// Whether a character is cased, in the sense the final-sigma rule means.
 ///
-/// The rule asks for a cased letter before the sigma. Without one, a lone `Σ` is not final
-/// and stays `σ`, which is what `str::to_lowercase` does.
+/// Unicode's `Cased` property is `Lowercase` or `Uppercase` or general category `Lt`, plus
+/// the `Other_*` additions. `char::is_lowercase` and `char::is_uppercase` cover the first
+/// two. They do not cover titlecase: `ǅ` is `Lt` and answers false to both, so a sigma
+/// after it was treated as though nothing cased preceded it.
+///
+/// A character with a case mapping that changes it is cased, which is what the last two
+/// arms test and what brings `Lt` in. Between them the four cover `Cased` for every
+/// character that has a case mapping at all.
+///
+/// The remainder is the handful of `Cased` characters with no mapping of their own, which
+/// no rule here can reach without a Unicode table this crate does not carry.
+/// `tests/lending_parity.rs` pins the cases that motivated each arm.
 pub fn is_cased(c: char) -> bool {
-    c.is_lowercase() || c.is_uppercase()
+    c.is_lowercase()
+        || c.is_uppercase()
+        || c.to_lowercase().next() != Some(c)
+        || c.to_uppercase().next() != Some(c)
 }
 
 #[cfg(test)]
