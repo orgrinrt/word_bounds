@@ -72,13 +72,7 @@ fn the_parity_cases_actually_run_when_both_backends_are_present() {
     // too. This runs it in the configuration it exists for and insists it executed
     // something, rather than merely that it built.
     let output = Command::new(env!("CARGO"))
-        .args([
-            "test",
-            "--test",
-            "backend_parity",
-            "--features",
-            "use_regex,use_fancy_regex",
-        ])
+        .args(["test", "--test", "backend_parity", "--features", "use_regex,use_fancy_regex"])
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .env(
             "CARGO_TARGET_DIR",
@@ -88,7 +82,10 @@ fn the_parity_cases_actually_run_when_both_backends_are_present() {
         .expect("cargo runs");
 
     let report = String::from_utf8_lossy(&output.stdout);
-    assert!(output.status.success(), "the parity suite passes:\n{report}");
+    assert!(
+        output.status.success(),
+        "the parity suite passes:\n{report}"
+    );
 
     let ran: usize = report
         .lines()
@@ -101,5 +98,151 @@ fn the_parity_cases_actually_run_when_both_backends_are_present() {
         ran >= 8,
         "the parity suite ran {ran} cases, where it has at least 8. A suite that compiles \
          and executes nothing reports success just as loudly."
+    );
+}
+
+#[test]
+fn nothing_at_all_builds() {
+    // `--no-default-features` with nothing added, which `check("")` does not do: that
+    // branch adds no flags and so builds the defaults, making this a second copy of
+    // `the_default_selection_builds` under a name claiming otherwise.
+    //
+    // What this selection leaves is the character walker with no performance flag, which is
+    // the shape a `no_std` consumer gets and has to stand on its own.
+    let output = Command::new(env!("CARGO"))
+        .args(["check", "--quiet", "--no-default-features"])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .env(
+            "CARGO_TARGET_DIR",
+            concat!(env!("CARGO_MANIFEST_DIR"), "/target/feature-matrix"),
+        )
+        .output()
+        .expect("cargo runs");
+
+    assert!(
+        output.status.success(),
+        "an empty selection builds:\n{}",
+        String::from_utf8_lossy(&output.stderr),
+    );
+}
+
+#[test]
+fn the_selections_the_manifest_offers_and_nothing_had_built() {
+    // `benchmark` and `enhanced_accuracy` are in the manifest and were in no case here, so
+    // the matrix's claim to cover every selection was short by three.
+    for selection in ["enhanced_accuracy", "no_alloc,enhanced_accuracy", "benchmark"] {
+        let (ok, err) = check(selection);
+        assert!(ok, "{selection} builds:\n{err}");
+    }
+}
+
+#[test]
+fn no_std_builds() {
+    let (ok, err) = check("no_std");
+    assert!(ok, "no_std builds:\n{err}");
+}
+
+#[test]
+fn no_alloc_builds_and_implies_no_std() {
+    let (ok, err) = check("no_alloc");
+    assert!(ok, "no_alloc builds:\n{err}");
+
+    // `no_alloc = ["no_std", "dep:notko"]`, so naming both is naming the same thing and
+    // must not conflict. A consumer whose workspace turns on `no_std` everywhere and
+    // reaches for the lending API in one crate arrives here.
+    let (ok, err) = check("no_alloc,no_std");
+    assert!(ok, "no_alloc with no_std builds:\n{err}");
+}
+
+#[test]
+fn no_alloc_composes_with_each_performance_flag() {
+    // The performance flags size the `Vec` the allocating API fills, so they have nothing
+    // to do with the lending one and must not collide with it.
+    for flag in ["optimize_for_cpu", "optimize_for_memory"] {
+        let features = format!("no_alloc,{flag}");
+        let (ok, err) = check(&features);
+        assert!(ok, "{features} builds:\n{err}");
+    }
+}
+
+#[test]
+fn asking_for_a_regex_backend_under_no_std_is_refused() {
+    // This used to assert the opposite, and said so: a consumer with both flags on "gets the
+    // character walker rather than a build failure". That is the defect rather than the
+    // behaviour. Silently substituting a different segmentation means different words out of
+    // the same input, with no error and nothing to grep for, and cargo unifies features
+    // across a dependency graph so it need not have been this consumer who asked for
+    // `no_std`.
+    for backend in ["use_regex", "use_fancy_regex"] {
+        let features = format!("no_std,{backend}");
+        let (ok, err) = check(&features);
+        assert!(!ok, "{features} must not build:\n{err}");
+        assert!(
+            err.contains("exclusive"),
+            "the refusal names the conflict:\n{err}"
+        );
+        assert!(
+            err.contains("cargo tree -e features"),
+            "the refusal says how to find which crate enabled `no_std`:\n{err}",
+        );
+    }
+}
+
+#[test]
+fn the_lending_suite_actually_runs_under_no_alloc() {
+    // `tests/lending_parity.rs` is `#![cfg(feature = "no_alloc")]`, so under any other
+    // selection it reports `running 0 tests`, which is what a suite that stopped compiling
+    // reports too. This runs it in the configuration it exists for and insists it executed
+    // something.
+    let output = Command::new(env!("CARGO"))
+        .args([
+            "test",
+            "--test",
+            "lending_parity",
+            "--no-default-features",
+            "--features",
+            "no_alloc",
+        ])
+        .current_dir(env!("CARGO_MANIFEST_DIR"))
+        .env(
+            "CARGO_TARGET_DIR",
+            concat!(env!("CARGO_MANIFEST_DIR"), "/target/feature-matrix"),
+        )
+        .output()
+        .expect("cargo runs");
+
+    let report = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        output.status.success(),
+        "the lending suite passes:\n{report}"
+    );
+
+    let ran: usize = report
+        .lines()
+        .find_map(|line| line.strip_prefix("test result: ok. "))
+        .and_then(|rest| rest.split(' ').next())
+        .and_then(|count| count.parse().ok())
+        .expect("the suite reported a result line");
+
+    assert!(
+        ran >= 5,
+        "the lending suite ran {ran} cases, where it has at least 5. A suite that compiles \
+         and executes nothing reports success just as loudly."
+    );
+}
+
+#[test]
+fn each_backend_builds_without_no_std() {
+    // The control for the refusal above. Without it that test passes on a crate where the
+    // backends do not build at all, which is a different defect wearing the same green.
+    for backend in ["use_regex", "use_fancy_regex"] {
+        let (ok, err) = check(backend);
+        assert!(ok, "`{backend}` builds on its own:\n{err}");
+    }
+
+    let (ok, err) = check("no_std");
+    assert!(
+        ok,
+        "`no_std` alone builds, leaving the character walker:\n{err}"
     );
 }

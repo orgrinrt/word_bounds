@@ -32,10 +32,19 @@ const CASES: &[&str] = &[
 fn main() {
     for input in CASES {
         println!("input: {input:?}");
-        println!("  charwalk:    {:?}", WordBoundResolver::<Charwalk, DefaultRules>::resolve(input));
+        println!(
+            "  charwalk:    {:?}",
+            WordBoundResolver::<Charwalk, DefaultRules>::resolve(input)
+        );
         #[cfg(feature = "use_regex")]
-        println!("  regex:       {:?}", WordBoundResolver::<Regex, DefaultRules>::resolve(input));
+        println!(
+            "  regex:       {:?}",
+            WordBoundResolver::<Regex, DefaultRules>::resolve(input)
+        );
         #[cfg(feature = "use_fancy_regex")]
-        println!("  fancy_regex: {:?}", WordBoundResolver::<FancyRegex, DefaultRules>::resolve(input));
+        println!(
+            "  fancy_regex: {:?}",
+            WordBoundResolver::<FancyRegex, DefaultRules>::resolve(input)
+        );
     }
 }

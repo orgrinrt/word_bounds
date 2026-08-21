@@ -147,6 +147,9 @@ mod edge_cases {
 
     #[test]
     fn single_character_input_yields_one_word() {
-        assert_eq!(WordBoundResolver::<Charwalk, DefaultRules>::resolve("a"), ["a"]);
+        assert_eq!(
+            WordBoundResolver::<Charwalk, DefaultRules>::resolve("a"),
+            ["a"]
+        );
     }
 }

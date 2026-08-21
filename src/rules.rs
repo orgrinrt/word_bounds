@@ -1,3 +1,7 @@
+use alloc::string::String;
+use alloc::vec::Vec;
+use alloc::{format, vec};
+
 use crate::rules::RemoveMode::{All, Middle};
 use crate::rules::ResolverProcessingRule::{BoundEnd, BoundStart, Remove};
 use crate::rules::RuleTarget::{
@@ -60,7 +64,7 @@ pub trait ResolverRules {
         let mut result: String = String::with_capacity(32);
         for i in (33..47).chain(58..64).chain(91..96).chain(123..127) {
             if excluded & (1u128 << i) == 0 {
-                if let Some(c) = std::char::from_u32(i as u32) {
+                if let Some(c) = core::char::from_u32(i as u32) {
                     result.push(c);
                 }
             }

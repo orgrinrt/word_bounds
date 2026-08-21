@@ -23,6 +23,55 @@ etc.).
 
 > Note: Work in progress; see [known issues](#known-issues) before choosing to use this crate
 
+## Allocation
+
+Three positions, each a feature, and each of them built by `tests/feature_matrix.rs`.
+
+| Feature | What is available |
+|---|---|
+| default | Everything. The regex backends, the shared compiled pattern, `Vec<String>` output. |
+| `no_std` | `Charwalk` and `alloc`. Both regex crates need `std`, so those backends are compiled out. |
+| `no_alloc` | Adds `fill_words`, which writes into storage the caller lends and allocates nothing. |
+
+`no_alloc` implies `no_std` and does not take the allocating API away. A crate that has an
+allocator and wants the lending form for one hot path enables it and keeps both.
+
+`fill_words` asks for two lends: somewhere to put the characters, and somewhere to put the
+bounds between them. Neither has to come from an allocator.
+
+```rust
+use word_bounds::fill_words;
+
+let mut text = [0u8; 32];
+let mut bounds = [(0, 0); 8];
+
+let words = fill_words("someHTTPRequest_id", &mut text, &mut bounds).unwrap();
+
+assert_eq!(words.len(), 4);
+assert_eq!(words.get(0), Some("some"));
+assert_eq!(words.get(3), Some("id"));
+```
+
+A lend too small refuses rather than handing back a short answer, and says how much was
+wanted against how much was there, so doubling from `wanted` converges.
+
+Both APIs go through one walk, so they cannot disagree about where a word ends. They can
+disagree about lowercasing, because `str::to_lowercase` applies the final-sigma rule and
+mapping each character on its own does not; the lending sink reproduces that rule by hand,
+and `tests/lending_parity.rs` runs 31 inputs through both and compares.
+
+## Examples
+
+```text
+cargo run --example compare_backends --features use_regex,use_fancy_regex
+cargo run --example lending --no-default-features --features no_alloc
+```
+
+The first prints what each backend makes of the same input, which is what a chooser needs
+to know. The second segments into two stack arrays with no allocator involved, and shows
+what a lend that ran out reports. Both are run by `cargo test`, in
+`tests/examples_run.rs`, which checks what they print rather than only that they built.
+
 ## Implementations & Performance
 
 This repository currently contains three different methods to perform word bounds resolution: with the standard `regex`

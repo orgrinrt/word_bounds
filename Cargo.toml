@@ -16,9 +16,20 @@ documentation = "https://docs.rs/word_bounds"
 homepage = "https://github.com/orgrinrt/word_bounds"
 repository = "https://github.com/orgrinrt/word_bounds"
 
+# The bench compares the backends against each other, so it needs them present. Without this
+# it is built under the default selection, which has neither regex backend, and fails on an
+# unresolved import of a module the features compiled out.
 [[bench]]
 name = "segmentation"
 harness = false
+required-features = ["benchmark"]
+
+# The lending API is behind `no_alloc`, so the example that uses it is too. Without
+# this, `cargo build --examples` on the default selection fails on a feature nobody
+# asked for.
+[[example]]
+name = "lending"
+required-features = ["no_alloc"]
 
 [dev-dependencies]
 criterion = { version = "0.5.1" }
@@ -27,7 +38,10 @@ criterion = { version = "0.5.1" }
 regex = { version = "1.10.5", optional = true }
 fancy-regex = { version = "0.13.0", optional = true }
 unicode-segmentation = { version = "1.11.0", optional = true }
-once_cell = { version = "1.8.0", optional = true }
+# Only under `no_alloc`, where it supplies the lending contract `fill_words` is written
+# against. notko is not on crates.io yet, so this is a git dependency, and a crate
+# carrying `no_alloc` cannot be published until it is.
+notko = { git = "https://github.com/orgrinrt/notko.git", branch = "dev", optional = true, default-features = false }
 
 [features]
 default = ["optimize_for_cpu"]
@@ -36,8 +50,20 @@ default = ["optimize_for_cpu"]
 use_fancy_regex = ["fancy-regex"]
 use_regex = ["regex"]
 # performance flags
-optimize_for_memory = ["once_cell"]
-optimize_for_cpu = ["once_cell"]
+# Neither pulls a dependency any more. Both used to name `once_cell`, which the shared
+# compiled pattern reached for until `std::sync::OnceLock` replaced it; the dependency
+# outlived its only use and was still being compiled by every default build.
+optimize_for_memory = []
+optimize_for_cpu = []
 enhanced_accuracy = ["unicode-segmentation"] # at cost of performance
+# allocation
+# `no_std` is exclusive with both regex backends, which need std, and asking for both is
+# refused at compile time rather than silently substituting the character walker. What
+# survives is `Charwalk`, which walks the characters itself and takes no dependency at all.
+no_std = []
+# `no_alloc` adds `fill_words`, which writes into storage the caller lends. It does not take
+# the allocating API away: a crate that has an allocator and wants the lending form for one
+# hot path enables this and keeps both.
+no_alloc = ["no_std", "dep:notko"]
 # misc
 benchmark = ["regex", "fancy-regex", "optimize_for_cpu"]
