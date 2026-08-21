@@ -72,13 +72,7 @@ fn the_parity_cases_actually_run_when_both_backends_are_present() {
     // too. This runs it in the configuration it exists for and insists it executed
     // something, rather than merely that it built.
     let output = Command::new(env!("CARGO"))
-        .args([
-            "test",
-            "--test",
-            "backend_parity",
-            "--features",
-            "use_regex,use_fancy_regex",
-        ])
+        .args(["test", "--test", "backend_parity", "--features", "use_regex,use_fancy_regex"])
         .current_dir(env!("CARGO_MANIFEST_DIR"))
         .env(
             "CARGO_TARGET_DIR",
@@ -88,7 +82,10 @@ fn the_parity_cases_actually_run_when_both_backends_are_present() {
         .expect("cargo runs");
 
     let report = String::from_utf8_lossy(&output.stdout);
-    assert!(output.status.success(), "the parity suite passes:\n{report}");
+    assert!(
+        output.status.success(),
+        "the parity suite passes:\n{report}"
+    );
 
     let ran: usize = report
         .lines()
@@ -169,14 +166,25 @@ fn no_alloc_composes_with_each_performance_flag() {
 }
 
 #[test]
-fn asking_for_a_regex_backend_under_no_std_still_builds() {
-    // Both regex crates need std, so `no_std` compiles those backends out. A consumer with
-    // both flags on, because a workspace turned one on everywhere, gets the character
-    // walker rather than a build failure.
+fn asking_for_a_regex_backend_under_no_std_is_refused() {
+    // This used to assert the opposite, and said so: a consumer with both flags on "gets the
+    // character walker rather than a build failure". That is the defect rather than the
+    // behaviour. Silently substituting a different segmentation means different words out of
+    // the same input, with no error and nothing to grep for, and cargo unifies features
+    // across a dependency graph so it need not have been this consumer who asked for
+    // `no_std`.
     for backend in ["use_regex", "use_fancy_regex"] {
         let features = format!("no_std,{backend}");
         let (ok, err) = check(&features);
-        assert!(ok, "{features} builds:\n{err}");
+        assert!(!ok, "{features} must not build:\n{err}");
+        assert!(
+            err.contains("exclusive"),
+            "the refusal names the conflict:\n{err}"
+        );
+        assert!(
+            err.contains("cargo tree -e features"),
+            "the refusal says how to find which crate enabled `no_std`:\n{err}",
+        );
     }
 }
 
@@ -204,7 +212,10 @@ fn the_lending_suite_actually_runs_under_no_alloc() {
         .expect("cargo runs");
 
     let report = String::from_utf8_lossy(&output.stdout);
-    assert!(output.status.success(), "the lending suite passes:\n{report}");
+    assert!(
+        output.status.success(),
+        "the lending suite passes:\n{report}"
+    );
 
     let ran: usize = report
         .lines()
@@ -217,5 +228,21 @@ fn the_lending_suite_actually_runs_under_no_alloc() {
         ran >= 5,
         "the lending suite ran {ran} cases, where it has at least 5. A suite that compiles \
          and executes nothing reports success just as loudly."
+    );
+}
+
+#[test]
+fn each_backend_builds_without_no_std() {
+    // The control for the refusal above. Without it that test passes on a crate where the
+    // backends do not build at all, which is a different defect wearing the same green.
+    for backend in ["use_regex", "use_fancy_regex"] {
+        let (ok, err) = check(backend);
+        assert!(ok, "`{backend}` builds on its own:\n{err}");
+    }
+
+    let (ok, err) = check("no_std");
+    assert!(
+        ok,
+        "`no_std` alone builds, leaving the character walker:\n{err}"
     );
 }

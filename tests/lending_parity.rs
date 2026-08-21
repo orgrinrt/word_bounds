@@ -14,8 +14,8 @@
 
 use word_bounds::fill_words;
 use word_bounds::impls::charwalk::Charwalk;
-use word_bounds::sink::is_cased;
 use word_bounds::resolver::WordBoundResolver;
+use word_bounds::sink::is_cased;
 
 /// The allocating API's answer, through the backend `fill_words` also uses.
 ///
@@ -211,5 +211,9 @@ fn the_text_lend_holds_exactly_the_words_run_together() {
     for word in segmented.iter() {
         at += word.len();
     }
-    assert_eq!(at, segmented.text_len(), "the bounds leave a gap or overlap");
+    assert_eq!(
+        at,
+        segmented.text_len(),
+        "the bounds leave a gap or overlap"
+    );
 }

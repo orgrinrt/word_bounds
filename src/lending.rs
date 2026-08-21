@@ -19,7 +19,7 @@ use crate::sink::{is_cased, WordSink, FINAL_SIGMA, NON_FINAL_SIGMA};
 /// bounds lend.
 #[derive(Debug, Clone, Copy)]
 pub struct Segmented<'a> {
-    text:   &'a [u8],
+    text: &'a [u8],
     bounds: &'a [(usize, usize)],
 }
 
@@ -44,12 +44,12 @@ impl<'a> Segmented<'a> {
         // every slice here is on a character boundary and is valid UTF-8 by construction.
         // Checked anyway: it is a scan of memory this crate wrote a moment ago, and being
         // wrong about that would be unsound rather than merely incorrect.
-        core::str::from_utf8(self.text.get(start .. end)?).ok()
+        core::str::from_utf8(self.text.get(start..end)?).ok()
     }
 
     /// Every word, in the order they appeared.
     pub fn iter(&self) -> impl Iterator<Item = &'a str> + '_ {
-        (0 .. self.len()).filter_map(|i| self.get(i))
+        (0..self.len()).filter_map(|i| self.get(i))
     }
 
     /// The characters of every word, run together with nothing between them.
@@ -135,18 +135,21 @@ where
     B: Lend<(usize, usize)> + ?Sized,
 {
     let mut sink = LendingSink {
-        text:          Fill::new(text),
-        bounds:        Fill::new(bounds),
+        text: Fill::new(text),
+        bounds: Fill::new(bounds),
         pending_start: 0,
-        held:          None,
-        last_cased:    None,
+        held: None,
+        last_cased: None,
     };
 
     if let Err(exhausted) = crate::impls::charwalk::walk::<R, _>(s, &mut sink) {
         return Outcome::Err(exhausted);
     }
 
-    Outcome::Ok(Segmented { text: sink.text.finish(), bounds: sink.bounds.finish() })
+    Outcome::Ok(Segmented {
+        text: sink.text.finish(),
+        bounds: sink.bounds.finish(),
+    })
 }
 
 /// A sink writing into two lends: the characters, and the bounds between words.
@@ -156,12 +159,12 @@ where
 /// its word, and that is not known until the next one arrives or the word ends. Holding one
 /// character costs nothing and means no byte written here is ever revised.
 struct LendingSink<'a> {
-    text:          Fill<'a, u8>,
-    bounds:        Fill<'a, (usize, usize)>,
+    text: Fill<'a, u8>,
+    bounds: Fill<'a, (usize, usize)>,
     /// Where in `text` the word being built starts.
     pending_start: usize,
     /// The character pushed most recently, not yet written.
-    held:          Option<char>,
+    held: Option<char>,
     /// The most recent cased character in the word being built, held or written.
     ///
     /// The rule asks for a cased character before the sigma, and `str::to_lowercase` walks
@@ -173,7 +176,7 @@ struct LendingSink<'a> {
     /// `"Α\u{301}Σ"` came out with the ordinary sigma where the allocating path gives the
     /// final one, because the combining accent between them is ignorable and was not being
     /// skipped.
-    last_cased:    Option<char>,
+    last_cased: Option<char>,
 }
 
 impl LendingSink<'_> {

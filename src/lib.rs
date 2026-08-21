@@ -23,6 +23,30 @@
 
 #![cfg_attr(feature = "no_std", no_std)]
 
+// Both regex crates need `std`, so `no_std` cannot have them, and asking for both used to
+// build clean and silently fall back to the character walker. A consumer got different words
+// out of the same input with no error and nothing to grep for, and because cargo unifies
+// features across a dependency graph it did not have to be the consumer who asked for
+// `no_std`: any sibling anywhere in the graph enabling it was enough.
+//
+// A refusal that names the fix is the honest form of a combination that cannot work.
+#[cfg(all(feature = "no_std", feature = "use_regex"))]
+compile_error!(
+    "word_bounds: `use_regex` and `no_std` are exclusive, and both are on. The regex backend \
+     needs std. Drop `use_regex` for the character walker, which is what `no_std` leaves, or \
+     drop `no_std`. Note that cargo unifies features across a dependency graph, so `no_std` \
+     may have been enabled by a sibling rather than by you: `cargo tree -e features` names it."
+);
+
+#[cfg(all(feature = "no_std", feature = "use_fancy_regex"))]
+compile_error!(
+    "word_bounds: `use_fancy_regex` and `no_std` are exclusive, and both are on. The \
+     fancy-regex backend needs std. Drop `use_fancy_regex` for the character walker, which is \
+     what `no_std` leaves, or drop `no_std`. Note that cargo unifies features across a \
+     dependency graph, so `no_std` may have been enabled by a sibling rather than by you: \
+     `cargo tree -e features` names it."
+);
+
 // `alloc` rather than `std`, in both configurations. It is a sysroot crate, so naming it
 // here costs a std build nothing and is what lets one set of paths serve both.
 extern crate alloc;

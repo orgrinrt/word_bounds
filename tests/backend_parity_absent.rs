@@ -24,7 +24,10 @@ fn resolve(input: &str) -> Vec<String> {
 fn the_character_walker_stands_alone() {
     // The backend that takes no dependency at all, and the only one `no_std` keeps. Under
     // this selection it is the whole crate, so these are the answers the crate gives.
-    assert_eq!(resolve("someHTTPRequest_id"), ["some", "http", "request", "id"]);
+    assert_eq!(
+        resolve("someHTTPRequest_id"),
+        ["some", "http", "request", "id"]
+    );
     assert_eq!(resolve("camelCase"), ["camel", "case"]);
     assert_eq!(resolve("snake_case"), ["snake", "case"]);
     assert_eq!(resolve("kebab-case"), ["kebab", "case"]);

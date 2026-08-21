@@ -47,9 +47,17 @@ const AGREED: &[&str] = &[
 /// and the `regex` backend genuinely cannot express it.
 #[test]
 fn a_run_is_the_same_character_repeated_not_any_punctuation() {
-    assert_eq!(charwalk("a...b"), ["a", "...", "b"], "repeated: kept as a run");
+    assert_eq!(
+        charwalk("a...b"),
+        ["a", "...", "b"],
+        "repeated: kept as a run"
+    );
     assert_eq!(charwalk("a..b"), ["a", "..", "b"]);
-    assert_eq!(charwalk("a.,b"), ["a", "b"], "mixed: not a run, and dropped");
+    assert_eq!(
+        charwalk("a.,b"),
+        ["a", "b"],
+        "mixed: not a run, and dropped"
+    );
     assert_eq!(charwalk("a.,.b"), ["a", "b"]);
     assert_eq!(charwalk("a!?!b"), ["a", "b"]);
 }
@@ -149,7 +157,10 @@ fn the_shared_pattern_survives_many_threads_arriving_together() {
                 })
             })
             .collect();
-        handles.into_iter().map(|h| h.join().expect("no thread panics")).collect()
+        handles
+            .into_iter()
+            .map(|h| h.join().expect("no thread panics"))
+            .collect()
     });
 
     for outcome in &outcomes {

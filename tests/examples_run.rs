@@ -58,11 +58,20 @@ fn the_lending_example_segments_and_refuses() {
     let out = run_example("lending", &["no_alloc"]);
 
     // The segmentation, from the stack arrays.
-    assert!(out.contains("[some] [http] [request] [id]"), "no segmentation in:\n{out}");
-    assert!(out.contains("[parse] [xml] [document]"), "no segmentation in:\n{out}");
+    assert!(
+        out.contains("[some] [http] [request] [id]"),
+        "no segmentation in:\n{out}"
+    );
+    assert!(
+        out.contains("[parse] [xml] [document]"),
+        "no segmentation in:\n{out}"
+    );
 
     // The refusal, on each lend in turn, carrying both numbers rather than only failing.
-    assert!(out.contains("refused: wanted at least 3, had 2"), "no bounds refusal in:\n{out}");
+    assert!(
+        out.contains("refused: wanted at least 3, had 2"),
+        "no bounds refusal in:\n{out}"
+    );
     assert!(
         out.contains("refused: wanted at least 5 bytes, had 4"),
         "no text refusal in:\n{out}",
@@ -70,5 +79,8 @@ fn the_lending_example_segments_and_refuses() {
 
     // And the final sigma, which is the one place the lending lowercasing had to reproduce
     // a rule rather than inherit it.
-    assert!(out.contains("[οδος] [στο]"), "the sigma rule did not fire in:\n{out}");
+    assert!(
+        out.contains("[οδος] [στο]"),
+        "the sigma rule did not fire in:\n{out}"
+    );
 }

@@ -1,5 +1,5 @@
-pub(crate) mod compiled;
 pub mod charwalk;
+pub(crate) mod compiled;
 // Both regex backends need `std`, and so does the `OnceLock` that caches the compiled
 // pattern, so `no_std` leaves only the character walker.
 #[cfg(all(not(feature = "no_std"), any(feature = "use_fancy_regex", feature = "benchmark")))]
@@ -18,7 +18,8 @@ macro_rules! __str_ext__instance_words_vec {
         let mut $vec = ::alloc::vec::Vec::with_capacity($s.len() / $crate::CHARS_PER_WORD_AVG);
         #[cfg(all(not(feature = "optimize_for_cpu"), feature = "optimize_for_memory"))]
         #[allow(unused_mut)]
-        let mut $vec = ::alloc::vec::Vec::with_capacity($s.len() / $crate::CHARS_PER_WORD_AVG as usize);
+        let mut $vec =
+            ::alloc::vec::Vec::with_capacity($s.len() / $crate::CHARS_PER_WORD_AVG as usize);
         #[cfg(all(not(feature = "optimize_for_cpu"), not(feature = "optimize_for_memory")))]
         #[allow(unused_mut)]
         let mut $vec = ::alloc::vec::Vec::new();
@@ -59,8 +60,9 @@ macro_rules! __str_ext__cache_static_regex {
             R: ResolverRules + 'static,
         {
             REGEX.get_or_init(|| match <$selfty>::compile_rules() {
-                CompiledRules::Regex(r) => <$regex>::new(r.as_str())
-                    .expect("Expected valid regex pattern"),
+                CompiledRules::Regex(r) => {
+                    <$regex>::new(r.as_str()).expect("Expected valid regex pattern")
+                },
                 _ => panic!("Compiled rules were not a Regex"),
             })
         }
