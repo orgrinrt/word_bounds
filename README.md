@@ -1,15 +1,32 @@
-word_bounds
-============
-<div style="text-align: center;">
+# `word_bounds`
+
+<div align="center" style="text-align: center;">
 
 [![GitHub Stars](https://img.shields.io/github/stars/orgrinrt/word_bounds.svg)](https://github.com/orgrinrt/word_bounds/stargazers)
+[![Crates.io](https://img.shields.io/crates/v/word_bounds)](https://crates.io/crates/word_bounds)
+[![docs.rs](https://img.shields.io/docsrs/word_bounds)](https://docs.rs/word_bounds)
 [![GitHub Issues](https://img.shields.io/github/issues/orgrinrt/word_bounds.svg)](https://github.com/orgrinrt/word_bounds/issues)
-[![Current Version](https://img.shields.io/badge/version-0.0.2-red.svg)](https://github.com/orgrinrt/word_bounds)
+![License](https://img.shields.io/github/license/orgrinrt/word_bounds?color=%23009689)
 
-> Word bound detection and string segmentation with flexible rule-based approach and varying implementations to choose
-> from
+> Word-bound detection and string segmentation, rule-based, with several implementations to pick from.
 
 </div>
+
+## Installation
+
+Not published yet, so this does not resolve. It is the command once a release
+lands.
+
+```bash
+cargo add word_bounds
+```
+
+Or in `Cargo.toml`:
+
+```toml
+[dependencies]
+word_bounds = "0.0.2"
+```
 
 ## Usage
 
@@ -72,7 +89,7 @@ to know. The second segments into two stack arrays with no allocator involved, a
 what a lend that ran out reports. Both are run by `cargo test`, in
 `tests/examples_run.rs`, which checks what they print rather than only that they built.
 
-## Implementations & Performance
+## Implementations and performance
 
 This repository currently contains three different methods to perform word bounds resolution: with the standard `regex`
 crate,
@@ -270,13 +287,14 @@ prioritization right now. Be the change you want to see in the world, if this do
 
 ## Support
 
-Whether you use this project, have learned something from it, or just like it, please consider supporting it by buying
-me a coffee, so I can dedicate more time on open-source projects like this :)
+Whether you use this project, have learned something from it, or just like it, please consider supporting it by buying me a coffee, so I can dedicate more time on open-source projects like this :)
 
 <a href="https://buymeacoffee.com/orgrinrt" target="_blank"><img src="https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png" alt="Buy Me A Coffee" style="height: auto !important;width: auto !important;" ></a>
 
 ## License
 
-> You can check out the full license [here](https://github.com/orgrinrt/word_bounds/blob/main/LICENSE)
+> The project is licensed under the **Mozilla Public License 2.0**.
 
-This project is licensed under the terms of the **MPL-2.0** license.
+`SPDX-License-Identifier: MPL-2.0`
+
+> You can check out the full license [here](https://github.com/orgrinrt/word_bounds/blob/dev/LICENSE)
