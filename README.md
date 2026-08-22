@@ -12,6 +12,22 @@
 
 </div>
 
+## Installation
+
+Not published yet, so this does not resolve. It is the command once a release
+lands.
+
+```bash
+cargo add word_bounds
+```
+
+Or in `Cargo.toml`:
+
+```toml
+[dependencies]
+word_bounds = "0.0.2"
+```
+
 ## Usage
 
 `word_bounds` crate is intended to help detect word bounds and split up longer strings into smaller segments
@@ -73,7 +89,7 @@ to know. The second segments into two stack arrays with no allocator involved, a
 what a lend that ran out reports. Both are run by `cargo test`, in
 `tests/examples_run.rs`, which checks what they print rather than only that they built.
 
-## Implementations & Performance
+## Implementations and performance
 
 This repository currently contains three different methods to perform word bounds resolution: with the standard `regex`
 crate,
